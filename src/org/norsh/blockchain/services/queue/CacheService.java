@@ -2,7 +2,7 @@ package org.norsh.blockchain.services.queue;
 
 import org.norsh.cache.CacheStore;
 import org.norsh.cache.RedisCache;
-import org.norsh.util.Log;
+import org.norsh.util.Logger;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
@@ -20,7 +20,7 @@ import org.springframework.stereotype.Service;
  */
 @Service
 public class CacheService extends RedisCache implements CacheStore {
-	public CacheService(@Qualifier("redisTemplate") RedisTemplate<String, String> redisTemplate, Log log) {
+	public CacheService(@Qualifier("redisTemplate") RedisTemplate<String, String> redisTemplate, Logger log) {
 		super(redisTemplate, log);
 	}
 }

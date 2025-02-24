@@ -4,7 +4,7 @@ import java.math.BigDecimal;
 
 import org.norsh.blockchain.docs.transactions.BalanceDoc;
 import org.norsh.blockchain.services.database.MongoMain;
-import org.norsh.util.Log;
+import org.norsh.util.Logger;
 import org.norsh.util.Strings;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -34,7 +34,7 @@ public class BalanceService {
 	private MongoMain mongoMain;
 	
 	@Autowired
-	private Log log;
+	private Logger log;
 
 	public String getId(String owner, String token) {
 		return Strings.concatenateWithSymbol("_", owner, token);

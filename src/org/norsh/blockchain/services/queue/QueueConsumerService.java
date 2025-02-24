@@ -9,7 +9,7 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.norsh.blockchain.config.BlockchainConfig;
-import org.norsh.util.Log;
+import org.norsh.util.Logger;
 import org.springframework.stereotype.Component;
 
 /**
@@ -26,7 +26,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class QueueConsumerService {
 	private volatile boolean running = true;
-	private final Log log;
+	private final Logger log;
 	private final KafkaConsumer<String, String> consumer;
 	private final ExecutorService executorService;
 	private final DispatcherService dispatcherService;
@@ -34,7 +34,7 @@ public class QueueConsumerService {
 	/**
 	 * Initializes the Kafka Consumer using settings from `blockchain.json`.
 	 */
-	public QueueConsumerService(KafkaConsumer<String, String> consumer, DispatcherService dispatcherService, Log log) {
+	public QueueConsumerService(KafkaConsumer<String, String> consumer, DispatcherService dispatcherService, Logger log) {
 		this.consumer = consumer;
 		this.dispatcherService = dispatcherService;
 		this.log = log;
