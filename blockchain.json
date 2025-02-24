@@ -1,0 +1,60 @@
+{
+	"locale": {
+		"language": "en",
+		"country": "US",
+		"timezone": "GMT"
+	},
+	
+	"defaults": {
+		"semaphoreLockTimeoutMs": 30000,
+		"threadInitialBackoffMs": 20,
+		"threadMaxBackoffMs": 2000,
+		"messagingTimeoutMs": 30000,
+		"messagingTtlMs": 600000,
+		"queueConsumerThreadPool": 20
+	},
+	
+	"networkPolicy" : {
+		"networkTax": 0.3,
+		"elementCreateAmount": 100
+	},
+	
+	"productionEnvironment": true,
+	
+	"log": {
+		"sysout": true,
+		"path": "logs/",
+		"prefix": "api",
+		"datePattern": "yyyyMMddHHmmss",
+		"maxLength": 62914560,
+		"maxRows": 100000,
+		"level": 6,
+		"rotationIntervalMinutes": 120
+	},
+	
+	"spring.properties": {
+		"spring.profiles.active": "main",
+		"spring.main.web-environment": false,
+		"logging.level.root": "WARN"
+	},
+	
+	"kafka": {
+		"bootstrapServers": "localhost:9092",
+		"groupId": "norsh-group",
+		"topic": "norsh.data"
+	},
+	
+	"redis": {
+		"host": "localhost",
+		"port": 6379
+	},
+	
+	"mongo.main": {
+		"connectionString": "mongodb://127.0.0.1:27017",
+		"database": "norsh"
+	},
+	
+	"nshTFO": "f073025a5dacd9387b3477fe28440b22a0cd065f53ca6477262e5bbc5e4ed0cc",
+	"publicKey": "MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEqlMXbRRaW9PK4lGkdPhtOsCYbz8a3VEPOpRmOnl3kz2saqZG/HInq7ECmBcxpvoY5HClZzW/mxGGNadG7ZyAwg==",
+	"privateKey": "MIGNAgEAMBAGByqGSM49AgEGBSuBBAAKBHYwdAIBAQQgUo2YTE4lPqsL7qT/qPndwwa5Tvv2Z40jlUdYbVR4Bw+gBwYFK4EEAAqhRANCAASqUxdtFFpb08riUaR0+G06wJhvPxrdUQ86lGY6eXeTPaxqpkb8ciersQKYFzGm+hjkcKVnNb+bEYY1p0btnIDC"
+}
