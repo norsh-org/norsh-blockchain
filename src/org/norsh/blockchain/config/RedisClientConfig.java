@@ -2,6 +2,7 @@ package org.norsh.blockchain.config;
 
 import org.norsh.cache.RedisClient;
 import org.norsh.config.RedisConfig;
+import org.norsh.util.Logger;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
@@ -43,14 +44,14 @@ public class RedisClientConfig extends RedisClient {
      * @return a configured {@link RedisConnectionFactory} instance.
      */
     @Bean
-    public RedisConnectionFactory redisConnectionFactory() {
+    public RedisConnectionFactory redisConnectionFactory(Logger log) {
         RedisConfig redisConfig = BlockchainConfig.getInstance().getRedisConfig();
         
         if (redisConfig == null) {
             throw new IllegalStateException("Redis configuration is missing. Ensure it is properly set in BlockchainConfig.");
         }
         
-        RedisConnectionFactory redisConnectionFactory = super.redisConnectionFactory(redisConfig);
+        RedisConnectionFactory redisConnectionFactory = super.redisConnectionFactory(redisConfig, log);
 
         // Clears Redis configuration from memory to enhance security
         BlockchainConfig.getInstance().clearRedisConfig();
