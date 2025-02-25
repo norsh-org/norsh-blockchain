@@ -11,6 +11,7 @@ import org.springframework.boot.Banner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration;
 import org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration;
 import org.springframework.context.annotation.ComponentScan;
 
@@ -47,7 +48,7 @@ import jakarta.annotation.PreDestroy;
  */
 @SpringBootApplication
 @ComponentScan("org.norsh.blockchain")
-@EnableAutoConfiguration(exclude = {MongoAutoConfiguration.class} )
+@EnableAutoConfiguration(exclude = {MongoAutoConfiguration.class, RedisRepositoriesAutoConfiguration.class} )
 public class NorshBlockchain {
 	@Autowired
 	private BootstrapSetup bootstrapService;
