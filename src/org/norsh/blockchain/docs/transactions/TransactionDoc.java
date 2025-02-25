@@ -7,6 +7,9 @@ import org.norsh.model.types.TransactionType;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
+
 import lombok.Getter;
 import lombok.Setter;
 
@@ -34,6 +37,7 @@ import lombok.Setter;
 @Setter
 @Getter
 @Document("ledger_w")
+@JsonInclude(Include.NON_NULL)
 public class TransactionDoc {
 	/**
 	 * Unique identifier for the transaction.
