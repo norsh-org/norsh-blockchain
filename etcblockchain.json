@@ -33,6 +33,8 @@
 	},
 	
 	"spring.properties": {
+		"server.host": "127.0.0.1",
+		"server.port": "4545",
 		"spring.profiles.active": "main",
 		"spring.main.web-environment": false,
 		"xxxlogging.level.root": "WARN"
