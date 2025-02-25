@@ -4,7 +4,6 @@ import java.util.Calendar;
 
 import org.norsh.blockchain.config.BlockchainConfig;
 import org.norsh.blockchain.services.BootstrapSetup;
-import org.norsh.blockchain.services.queue.QueueConsumerService;
 import org.norsh.util.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.Banner;
@@ -13,6 +12,7 @@ import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration;
 import org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration;
+import org.springframework.boot.autoconfigure.web.servlet.WebMvcAutoConfiguration;
 import org.springframework.context.annotation.ComponentScan;
 
 import jakarta.annotation.PostConstruct;
@@ -48,7 +48,7 @@ import jakarta.annotation.PreDestroy;
  */
 @SpringBootApplication
 @ComponentScan("org.norsh.blockchain")
-@EnableAutoConfiguration(exclude = {MongoAutoConfiguration.class, RedisRepositoriesAutoConfiguration.class} )
+@EnableAutoConfiguration(exclude = {WebMvcAutoConfiguration.class, MongoAutoConfiguration.class, RedisRepositoriesAutoConfiguration.class} )
 public class NorshBlockchain {
 	@Autowired
 	private BootstrapSetup bootstrapService;
@@ -56,8 +56,8 @@ public class NorshBlockchain {
 	@Autowired
 	private Logger log;
 
-	@Autowired
-	private QueueConsumerService consumerService;
+//	@Autowired
+//	private QueueConsumerService consumerService;
 	
 	/**
      * Entry point for the Norsh Blockchain worker.
@@ -67,8 +67,6 @@ public class NorshBlockchain {
      * </p>
      */
 	public static void main(String[] args) {
-		
-		
 		BlockchainConfig.initializeDefaultLocalization();
 		SpringApplication app = new SpringApplication(NorshBlockchain.class);
 		app.setBannerMode(Banner.Mode.OFF);
@@ -93,16 +91,16 @@ public class NorshBlockchain {
 
 		bootstrapService.start();
 		
-		consumerService.startConsumer();
+		//consumerService.startConsumer();
 	}
 
-	 /**
+	/**
      * Ensures all services are properly shut down before termination.
      */
 	@PreDestroy
 	private void shutdown() {
 		log.system("Starting shutdown process for Norsh Blockchain...");
-		consumerService.shutdown();
+		// consumerService.shutdown();
 		//shutdown mongo
 		//shutdown redis
 	}

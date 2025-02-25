@@ -101,14 +101,19 @@ public class DispatcherService {
 	public void dispatch(String json) {
 		loadDispatcherService();
 
+		dispatch(Converter.fromJson(json, DataTransfer.class));
+	}
+	
+	public DataTransfer dispatch(DataTransfer transfer) {
+		loadDispatcherService();
+
 		try {
-			DataTransfer transport = Converter.fromJson(json, DataTransfer.class);
-			String requestClassName = transport.getRequestClassName();
-			String key = generateKey(requestClassName, transport.getMethod());
+			String requestClassName = transfer.getRequestClassName();
+			String key = generateKey(requestClassName, transfer.getMethod());
 
 			// Validate that the class belongs to the DistributedDto package
 			if (requestClassName != null && requestClassName.startsWith(DistributedDto.class.getPackageName())) {
-				DistributedDto dto = (DistributedDto) Converter.convert(transport.getRequestData(), Class.forName(requestClassName));
+				DistributedDto dto = (DistributedDto) Converter.convert(transfer.getRequestData(), Class.forName(requestClassName));
 
 				// Retrieve the registered processing method
 				Method method = methodRegistry.get(key);
@@ -121,13 +126,14 @@ public class DispatcherService {
 				Object serviceInstance = serviceRegistry.get(method.getDeclaringClass().getCanonicalName());
 				try {
 					Object result = method.invoke(serviceInstance, dto);
-					messagingService.response(dto.getRequestId(), result);
+					return messagingService.response(dto.getRequestId(), result);
 				} catch (InvocationTargetException ex) {
 					if (ex.getCause() instanceof OperationException) {
 						OperationException ox = (OperationException) ex.getCause();
-						messagingService.response(dto.getRequestId(), ox.getOperationStatus(), ox.getData());
+						return messagingService.response(dto.getRequestId(), ox.getOperationStatus(), ox.getData());
 					} else {
 						ex.printStackTrace();
+						return null;
 					}
 				}
 			} else {
@@ -136,8 +142,8 @@ public class DispatcherService {
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
-			log.error("Error processing request: " + json, e);
-			throw new InternalException("Error processing request: " + json, e);
+			log.error("Error processing request: ", e);
+			throw new InternalException("Error processing request: ", e);
 		}
 	}
 

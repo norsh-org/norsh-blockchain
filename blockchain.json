@@ -33,9 +33,16 @@
 	},
 	
 	"spring.properties": {
+		"server.host": "127.0.0.1",
+		"server.port": "4545",
+		"x.ssl.keyAlias": "server",
+		"x.ssl.keyPassword": "pwd",
+		"x.ssl.keyStore": "classpath:file.jks",
+		"x.ssl.keyStoreProvider": "SUN",
+		"x.ssl.keyStoreType": "JKS",
 		"spring.profiles.active": "main",
 		"spring.main.web-environment": false,
-		"logging.level.root": "WARN"
+		"xlogging.level.root": "WARN"
 	},
 	
 	"kafka": {
