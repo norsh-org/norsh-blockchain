@@ -45,7 +45,7 @@
 	},
 	
 	"redis": {
-		"host": "clustercfg.rdssys.fpwpvo.memorydb.us-east-1.amazonaws.com",
+		"host": "cachesys.fpwpvo.clustercfg.memorydb.us-east-1.amazonaws.com:6379",
 		"port": 6379,
 		"cluster": true
 	},
