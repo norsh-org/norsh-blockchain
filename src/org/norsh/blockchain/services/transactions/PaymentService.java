@@ -12,14 +12,12 @@ import org.norsh.blockchain.docs.utils.DynamicSequenceDoc;
 import org.norsh.blockchain.services.BalanceService;
 import org.norsh.blockchain.services.BlockService;
 import org.norsh.blockchain.services.database.MongoMain;
-import org.norsh.blockchain.services.queue.MessagingResponseService;
 import org.norsh.blockchain.services.utils.DynamicSequenceService;
 import org.norsh.blockchain.services.utils.SemaphoreService;
 import org.norsh.constants.FeePolicy;
 import org.norsh.exceptions.OperationException;
 import org.norsh.exceptions.OperationStatus;
 import org.norsh.model.dtos.transactions.PaymentCreateDto;
-import org.norsh.model.transport.DataTransfer;
 import org.norsh.model.transport.Processable;
 import org.norsh.model.transport.RestMethod;
 import org.norsh.model.types.TransactionType;
@@ -28,27 +26,26 @@ import org.norsh.util.Converter;
 import org.norsh.util.Shard;
 import org.norsh.util.Strings;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.mongodb.core.query.Criteria;
-import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Service;
 
 /**
  * Service for handling transaction creation.
  * <p>
- * This service validates transaction requests, verifies the associated element and balance, calculates tax amounts,
- * and stores the transaction in MongoDB using distributed semaphores for consistency. An optional additional execution
- * operation (addOnExecution) can be provided to perform complementary processing alongside the main transaction creation.
+ * This service validates transaction requests, verifies the associated element and balance, calculates tax amounts, and
+ * stores the transaction in MongoDB using distributed semaphores for consistency. An optional additional execution
+ * operation (addOnExecution) can be provided to perform complementary processing alongside the main transaction
+ * creation.
  * </p>
  * <p>
  * Process Flow:
  * <ol>
- *   <li>Validate the transaction creation request.</li>
- *   <li>Retrieve the associated element using the Universal Database Notary (UDBN) token.</li>
- *   <li>Calculate and apply tax amounts based on the element's policy and fee settings.</li>
- *   <li>Execute an additional operation for complementary processing if provided.</li>
- *   <li>Verify and update the sender's and recipient's balances using distributed semaphores.</li>
- *   <li>Store the transaction in the ledger by linking it with the previous transaction ID.</li>
- *   <li>Add the transaction to the current block and mark it as confirmed.</li>
+ * <li>Validate the transaction creation request.</li>
+ * <li>Retrieve the associated element using the Universal Database Notary (UDBN) token.</li>
+ * <li>Calculate and apply tax amounts based on the element's policy and fee settings.</li>
+ * <li>Execute an additional operation for complementary processing if provided.</li>
+ * <li>Verify and update the sender's and recipient's balances using distributed semaphores.</li>
+ * <li>Store the transaction in the ledger by linking it with the previous transaction ID.</li>
+ * <li>Add the transaction to the current block and mark it as confirmed.</li>
  * </ol>
  * </p>
  * 
@@ -61,7 +58,7 @@ import org.springframework.stereotype.Service;
 public class PaymentService {
 	@Autowired
 	private NorshCoin norshCoin;
-	
+
 	@Autowired
 	private BalanceService balanceService;
 
@@ -80,28 +77,28 @@ public class PaymentService {
 //	@Autowired
 //	private MongoRead mongoRead;
 
-	@Autowired
-	private MessagingResponseService messagingService;
+//	@Autowired
+//	private MessagingResponseService messagingService;
 
 	@Processable(method = RestMethod.POST)
 	public TransactionDoc internalTransaction(PaymentCreateDto paymentCreate) {
 		return executeTransaction(paymentCreate, TransactionType.INTERNAL);
 	}
-	
+
 	public TransactionDoc executeTransaction(PaymentCreateDto paymentCreate, TransactionType transactionType) {
 		paymentCreate.validate();
-		
+
 		if (transactionType == TransactionType.INTERNAL && !paymentCreate.getTo().equals(norshCoin.getOwner())) {
 			paymentCreate.validateSignature();
 		}
-		
+
 		ElementDoc element = mongoMain.id(paymentCreate.getElement(), ElementDoc.class);
 		if (element == null) {
 			throw new OperationException(OperationStatus.ERROR, "Element not found");
 		}
-		
+
 		String owner = Hasher.sha3Hex(Converter.base64OrHexToBytes(paymentCreate.getPublicKey()));
-		
+
 		TransactionDoc transaction = new TransactionDoc();
 		transaction.setType(transactionType);
 		transaction.setFrom(owner);
@@ -112,21 +109,18 @@ public class PaymentService {
 		transaction.setPublicKey(paymentCreate.getPublicKey());
 		transaction.setLink(paymentCreate.getLink());
 		transaction.setHash(paymentCreate.getHash());
-		
 		transaction.setSignature(paymentCreate.getSignature());
-		
 		transaction.setTimestamp(System.currentTimeMillis());
 		transaction.setShard(Shard.calculateWeekShard(transaction.getTimestamp()));
 		transaction.setLedger(getCurrentLedger(transaction.getShard()));
-		transaction.setConfirmed(false);
 		transaction.setPrivacy(element.getPrivacy());
 		transaction.setVersion(1);
-		
+
 		setTransactionTax(transaction, element);
-		
-		//Execute transaction
+
+		// Execute transaction
 		String semaphoreFrom = balanceService.getId(transaction.getFrom(), transaction.getElement());
-		
+
 		semaphoreService.execute(semaphoreFrom, _ -> {
 			BalanceDoc balanceFrom = balanceService.get(transaction.getFrom(), transaction.getElement());
 
@@ -141,31 +135,32 @@ public class PaymentService {
 
 				Long blockNumber = blockService.addTransactionToBlock(transaction);
 				transaction.setBlock(blockNumber);
-				
+
 				mongoMain.save(transaction, transaction.getLedger());
 				dynamicSequenceService.set(transaction.getElement(), transaction.getId());
 			});
 
-			balanceService.set(balanceFrom, balanceFrom.getAmount().subtract(transaction.getVolume()));
-		});
-		
-		String semaphoreTo = balanceService.getId(transaction.getTo(), transaction.getElement());
-		
-		semaphoreService.execute(semaphoreTo, _ -> {
-			BalanceDoc balanceTo = balanceService.get(transaction.getTo(), transaction.getElement());
-			balanceService.set(balanceTo, balanceTo.getAmount().add(transaction.getVolume()));
-		});
+			balanceService.set(balanceFrom, balanceFrom.getAmount().subtract(transaction.getTotal()));
 
-		//Add transaction to block
-		//Update update = Update.update("confirmed", true).set("block", blockId);
-		//mongoMain.update(Criteria.where("_id").is(transaction.getId()), update, TransactionDoc.class, transaction.getLedger());
+			String semaphoreTo = balanceService.getId(transaction.getTo(), transaction.getElement());
+
+			semaphoreService.execute(semaphoreTo, _ -> {
+				BalanceDoc balanceTo = balanceService.get(transaction.getTo(), transaction.getElement());
+				balanceService.set(balanceTo, balanceTo.getAmount().add(transaction.getVolume()));
+			});
+		});
 
 		captureTax(transaction, element);
-		
-		return mongoMain.id(transaction.getId(), TransactionDoc.class, transaction.getLedger());
+
+		// Add transaction to block
+		// Update update = Update.update("confirmed", true).set("block", blockId);
+		// mongoMain.update(Criteria.where("_id").is(transaction.getId()), update, TransactionDoc.class,
+		// transaction.getLedger());
+
+		return transaction; // mongoMain.id(, TransactionDoc.class, transaction.getLedger());
 	}
-	
-	private DataTransfer captureTax(TransactionDoc transaction, ElementDoc element) {
+
+	private void captureTax(TransactionDoc transaction, ElementDoc element) {
 		TransactionDoc transactionTax = new TransactionDoc();
 		transactionTax.setType(TransactionType.CAPTURE);
 		transactionTax.setFrom(transaction.getFrom());
@@ -175,58 +170,45 @@ public class PaymentService {
 		transactionTax.setNonce(transaction.getTimestamp());
 		transactionTax.setHash(transaction.getHash());
 		transactionTax.setLink(transaction.getId());
-		
+
 		transactionTax.setHash(Hasher.sha256Hex(Strings.concatenate(transactionTax.getTo(), transactionTax.getElement(), transactionTax.getVolume(), transactionTax.getNonce(), transactionTax.getLink(), transactionTax.getPublicKey())));
-		
+
 		transactionTax.setTimestamp(System.currentTimeMillis());
 		transactionTax.setShard(Shard.calculateWeekShard(transactionTax.getTimestamp()));
 		transactionTax.setLedger(getCurrentLedger(transactionTax.getShard()));
 
-		transactionTax.setConfirmed(false);
 		transactionTax.setPrivacy(element.getPrivacy());
 		transactionTax.setVersion(1);
-		
-		setTransactionTax(transactionTax, element);
-		
-		String semaphoreFrom = balanceService.getId(transactionTax.getFrom(), transactionTax.getElement());
-		String semaphoreTo = balanceService.getId(transactionTax.getTo(), transactionTax.getElement());
 
-		DataTransfer transportExecution = semaphoreService.execute(semaphoreFrom, _ -> {
-			BalanceDoc balanceFrom = balanceService.get(transactionTax.getFrom(), transactionTax.getElement());
+		transactionTax.setElementTax(BigDecimal.ZERO);
+		transactionTax.setNetworkTax(BigDecimal.ZERO);
+		transactionTax.setTotalTax(BigDecimal.ZERO);
+		transactionTax.setTotal(transaction.getVolume());
 
-			semaphoreService.execute(transactionTax.getElement(), _ -> {
-				DynamicSequenceDoc dynamicSequence = dynamicSequenceService.get(transactionTax.getElement());
-				transactionTax.setPreviousId(dynamicSequence.getData());
-				transactionTax.setId(Hasher.sha3Hex(Strings.concatenate(transactionTax.getPreviousId(), transactionTax.getHash())));
-
-				mongoMain.save(transactionTax, transactionTax.getLedger());
-				dynamicSequenceService.set(transactionTax.getElement(), transactionTax.getId());
-			});
-
-			if (transactionTax.getId() == null) {
-				return messagingService.response(transaction.getHash(), OperationStatus.ERROR, "Transaction not confirmed.");
-			}
-
-			balanceService.set(balanceFrom, balanceFrom.getAmount().subtract(transactionTax.getVolume()));
-
-			return messagingService.response(transaction.getHash(), transactionTax); 
+		semaphoreService.execute(transactionTax.getElement(), _ -> {
+			DynamicSequenceDoc dynamicSequence = dynamicSequenceService.get(transactionTax.getElement());
+			transactionTax.setPreviousId(dynamicSequence.getData());
+			transactionTax.setId(Hasher.sha3Hex(Strings.concatenate(transactionTax.getPreviousId(), transactionTax.getHash())));
+			Long blockNumber = blockService.addTransactionToBlock(transactionTax);
+			transaction.setBlock(blockNumber);
+			
+			mongoMain.save(transactionTax, transactionTax.getLedger());
+			dynamicSequenceService.set(transactionTax.getElement(), transactionTax.getId());
 		});
 
-		if (transportExecution.getStatus() != OperationStatus.OK) {
-			return transportExecution;
-		}
-		
+		String semaphoreTo = balanceService.getId(transactionTax.getTo(), transactionTax.getElement());
+
 		semaphoreService.execute(semaphoreTo, _ -> {
 			BalanceDoc balanceTo = balanceService.get(transactionTax.getTo(), transactionTax.getElement());
 			balanceService.set(balanceTo, balanceTo.getAmount().add(transactionTax.getVolume()));
 		});
 
-		Long blockNumber = blockService.addTransactionToBlock(transactionTax);
-		Update update = Update.update("confirmed", true).set("block", blockNumber);
-		mongoMain.update(Criteria.where("_id").is(transactionTax.getId()), update, TransactionDoc.class, transactionTax.getLedger());
+//		Long blockNumber = blockService.addTransactionToBlock(transactionTax);
+//		Update update = Update.update("confirmed", true).set("block", blockNumber);
+//		mongoMain.update(Criteria.where("_id").is(transactionTax.getId()), update, TransactionDoc.class, transactionTax.getLedger());
 
-		TransactionDoc result = mongoMain.id(transactionTax.getId(), TransactionDoc.class, transactionTax.getLedger());
-		return messagingService.response(transaction.getHash(), result);
+		//TransactionDoc result = mongoMain.id(transactionTax.getId(), TransactionDoc.class, transactionTax.getLedger());
+		//return messagingService.response(transaction.getHash(), result);
 	}
 
 	/**
@@ -244,44 +226,43 @@ public class PaymentService {
 	 * <p>
 	 * The method computes:
 	 * <ul>
-	 *   <li>The element tax amount using the transaction tax from the element's policy.</li>
-	 *   <li>The network tax amount based on the standard network fee policy.</li>
-	 *   <li>The total tax as the sum of the element and network tax amounts.</li>
-	 *   <li>The total transaction amount as the sum of the transaction volume and total tax.</li>
+	 * <li>The element tax amount using the transaction tax from the element's policy.</li>
+	 * <li>The network tax amount based on the standard network fee policy.</li>
+	 * <li>The total tax as the sum of the element and network tax amounts.</li>
+	 * <li>The total transaction amount as the sum of the transaction volume and total tax.</li>
 	 * </ul>
 	 * </p>
 	 * 
 	 * @param transaction The {@link TransactionDoc} to update with calculated tax values.
-	 * @param element The {@link ElementDoc} providing policy and configuration for tax calculation.
+	 * @param element     The {@link ElementDoc} providing policy and configuration for tax calculation.
 	 */
 	private void setTransactionTax(TransactionDoc transaction, ElementDoc element) {
 		if (transaction.getType() == TransactionType.CAPTURE || transaction.getType() == TransactionType.REWARD || transaction.getVolume().compareTo(BigDecimal.ZERO) == 0) {
 			transaction.setElementTax(BigDecimal.ZERO);
-		    transaction.setNetworkTax(BigDecimal.ZERO);
-		    transaction.setTotalTax(BigDecimal.ZERO);
-		    transaction.setTotal(transaction.getVolume());
-		    return;
+			transaction.setNetworkTax(BigDecimal.ZERO);
+			transaction.setTotalTax(BigDecimal.ZERO);
+			transaction.setTotal(transaction.getVolume());
+			return;
 		}
-		
-	    BigDecimal PERCENTAGE_DIVISOR = BigDecimal.valueOf(100);
 
-	    BigDecimal elementTax = (element.getPolicy() == null || element.getPolicy().getTransactionTax() == null) 
-	            ? BigDecimal.ZERO 
-	            : BigDecimal.valueOf(element.getPolicy().getTransactionTax()).divide(PERCENTAGE_DIVISOR, element.getDecimals(), RoundingMode.HALF_UP);
+		BigDecimal PERCENTAGE_DIVISOR = BigDecimal.valueOf(100);
 
-	    BigDecimal networkTax = FeePolicy.getNetworkTax().divide(PERCENTAGE_DIVISOR, element.getDecimals(), RoundingMode.HALF_UP);
+		BigDecimal elementTax = (element.getPolicy() == null || element.getPolicy().getTransactionTax() == null) ? BigDecimal.ZERO
+				: BigDecimal.valueOf(element.getPolicy().getTransactionTax()).divide(PERCENTAGE_DIVISOR, element.getDecimals(), RoundingMode.HALF_UP);
 
-	    // Calculate individual tax amounts
-	    BigDecimal elementTaxAmount = transaction.getVolume().multiply(elementTax);
-	    BigDecimal networkTaxAmount = transaction.getVolume().multiply(networkTax);
+		BigDecimal networkTax = FeePolicy.getNetworkTax().divide(PERCENTAGE_DIVISOR, element.getDecimals(), RoundingMode.HALF_UP);
 
-	    // Sum up the total tax
-	    BigDecimal totalTax = elementTaxAmount.add(networkTaxAmount);
+		// Calculate individual tax amounts
+		BigDecimal elementTaxAmount = transaction.getVolume().multiply(elementTax);
+		BigDecimal networkTaxAmount = transaction.getVolume().multiply(networkTax);
 
-	    // Update the transaction with tax and total values
-	    transaction.setElementTax(elementTaxAmount);
-	    transaction.setNetworkTax(networkTaxAmount);
-	    transaction.setTotalTax(totalTax);
-	    transaction.setTotal(transaction.getVolume().add(totalTax));
+		// Sum up the total tax
+		BigDecimal totalTax = elementTaxAmount.add(networkTaxAmount);
+
+		// Update the transaction with tax and total values
+		transaction.setElementTax(elementTaxAmount);
+		transaction.setNetworkTax(networkTaxAmount);
+		transaction.setTotalTax(totalTax);
+		transaction.setTotal(transaction.getVolume().add(totalTax));
 	}
 }

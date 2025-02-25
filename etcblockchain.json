@@ -37,7 +37,7 @@
 		"server.port": "4545",
 		"spring.profiles.active": "main",
 		"spring.main.web-environment": false,
-		"xxxlogging.level.root": "WARN"
+		"logging.level.root": "WARN"
 	},
 	
 	"kafka": {

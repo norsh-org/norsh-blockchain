@@ -144,7 +144,6 @@ public class TransactionService {
 		transaction.setTimestamp(System.currentTimeMillis());
 		transaction.setShard(Shard.calculateWeekShard(transaction.getTimestamp()));
 		transaction.setLedger(getCurrentLedger(transaction.getShard()));
-		transaction.setConfirmed(false);
 		transaction.setPrivacy(element.getPrivacy());
 		transaction.setVersion(1);
 		
@@ -217,7 +216,6 @@ public class TransactionService {
 		transactionTax.setLedger(getCurrentLedger(transactionTax.getShard()));
 		transactionTax.setLink(transaction.getId());
 
-		transactionTax.setConfirmed(false);
 		transactionTax.setPrivacy(element.getPrivacy());
 		transactionTax.setVersion(1);
 		

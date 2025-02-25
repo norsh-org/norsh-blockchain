@@ -176,11 +176,6 @@ public class TransactionDoc {
 	private Long block;
 	
 	/**
-	 * Indicates whether the transaction has been confirmed.
-	 */
-	private Boolean confirmed;
-
-	/**
 	 * The version of the transaction structure.
 	 * <p>
 	 * This field indicates the version of the transaction's data structure, allowing for future updates or schema changes
