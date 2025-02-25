@@ -35,7 +35,7 @@
 	"spring.properties": {
 		"spring.profiles.active": "main",
 		"spring.main.web-environment": false,
-		"logging.level.root": "WARN"
+		"xxxlogging.level.root": "WARN"
 	},
 	
 	"kafka": {
