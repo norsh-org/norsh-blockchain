@@ -39,7 +39,7 @@
 	},
 	
 	"kafka": {
-		"bootstrapServers": "boot-felynjdx.c1.kafka-serverless.us-east-1.amazonaws.com:9098",
+		"bootstrapServers": "b-2.queuesys.8mx5zp.c14.kafka.us-east-1.amazonaws.com:9092,b-1.queuesys.8mx5zp.c14.kafka.us-east-1.amazonaws.com:9092",
 		"groupId": "norsh-group",
 		"topic": "norsh.data"
 	},
