@@ -72,12 +72,12 @@ public class SemaphoreService {
      * @return {@code true} if the lock was successfully released after execution.
      */
     public void execute(String resourceId, Long timeoutMs, Consumer<String> function) {
-    	String lockId = ""; //= acquireLock(resourceId, timeoutMs);
+        String lockId = acquireLock(resourceId, timeoutMs);
 
         try {
             function.accept(lockId);
         } finally {
-        	//release(resourceId, lockId);
+        	release(resourceId, lockId);
 		}
     }
 
@@ -147,7 +147,7 @@ public class SemaphoreService {
                     success = cacheService.getTemplate().opsForValue().setIfAbsent(
                             resourceId, lockId, defaultsConfig.getSemaphoreLockTimeoutMs(), TimeUnit.MILLISECONDS);
 
-                    if (success && lockId.equals(cacheService.get(resourceId))) {
+                    if (success) { // && lockId.equals(cacheService.get(resourceId))) {
                         return lockId;
                     }
 
