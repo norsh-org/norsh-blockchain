@@ -3,7 +3,6 @@ package org.norsh.blockchain.config;
 import java.util.List;
 import java.util.Properties;
 
-import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.StringDeserializer;
