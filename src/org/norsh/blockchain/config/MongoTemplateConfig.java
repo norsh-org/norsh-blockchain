@@ -74,7 +74,7 @@ public class MongoTemplateConfig {
     	
         MongoClientSettings settings = MongoClientSettings.builder()
             .applyConnectionString(new ConnectionString(mainConfig.getConnectionString()))
-            .readPreference(ReadPreference.primary()) // Prioritize primary node for read
+            //.readPreference(ReadPreference.primary()) // Prioritize primary node for read
             .build();
 
         MongoTemplate mongoTemplate = new MongoTemplate(MongoClients.create(settings), mainConfig.getDatabase());
@@ -105,7 +105,7 @@ public class MongoTemplateConfig {
     	
         MongoClientSettings settings = MongoClientSettings.builder()
             .applyConnectionString(new ConnectionString(mainConfig.getConnectionString()))
-            .readPreference(ReadPreference.secondaryPreferred()) // Prioritize secondary nodes for reads
+            //.readPreference(ReadPreference.secondaryPreferred()) // Prioritize secondary nodes for reads
             .build();
 
         MongoTemplate mongoTemplate = new MongoTemplate(MongoClients.create(settings), mainConfig.getDatabase());
