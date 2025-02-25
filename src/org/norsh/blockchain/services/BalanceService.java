@@ -36,7 +36,7 @@ public class BalanceService {
 	@Autowired
 	private Logger log;
 
-	public String getId(String owner, String token) {
+	public String buildId(String owner, String token) {
 		return Strings.concatenateWithSymbol("_", owner, token);
 	}
 
@@ -51,7 +51,7 @@ public class BalanceService {
 	 * @return the balance document.
 	 */
 	public BalanceDoc get(String owner, String token) {
-		String id = getId(owner, token);
+		String id = buildId(owner, token);
 		BalanceDoc balance = mongoMain.id(id, BalanceDoc.class);
 
 		if (balance == null) {

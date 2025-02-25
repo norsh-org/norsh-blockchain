@@ -155,8 +155,8 @@ public class TransactionService {
 		
 		additionalExecution.accept(transaction);
 
-		String semaphoreFrom = balanceService.getId(transaction.getFrom(), transaction.getElement());
-		String semaphoreTo = balanceService.getId(transaction.getTo(), transaction.getElement());
+		String semaphoreFrom = balanceService.buildId(transaction.getFrom(), transaction.getElement());
+		String semaphoreTo = balanceService.buildId(transaction.getTo(), transaction.getElement());
 
 		DataTransfer transportExecution = semaphoreService.execute(semaphoreFrom, _ -> {
 			BalanceDoc balanceFrom = balanceService.get(transaction.getFrom(), transaction.getElement());
@@ -221,8 +221,8 @@ public class TransactionService {
 		
 		calculateTax(transactionTax, element);
 		
-		String semaphoreFrom = balanceService.getId(transactionTax.getFrom(), transactionTax.getElement());
-		String semaphoreTo = balanceService.getId(transactionTax.getTo(), transactionTax.getElement());
+		String semaphoreFrom = balanceService.buildId(transactionTax.getFrom(), transactionTax.getElement());
+		String semaphoreTo = balanceService.buildId(transactionTax.getTo(), transactionTax.getElement());
 
 		DataTransfer transportExecution = semaphoreService.execute(semaphoreFrom, _ -> {
 			BalanceDoc balanceFrom = balanceService.get(transactionTax.getFrom(), transactionTax.getElement());

@@ -26,6 +26,8 @@ import org.norsh.util.Converter;
 import org.norsh.util.Shard;
 import org.norsh.util.Strings;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Service;
 
 /**
@@ -119,7 +121,7 @@ public class PaymentService {
 		setTransactionTax(transaction, element);
 
 		// Execute transaction
-		String semaphoreFrom = balanceService.getId(transaction.getFrom(), transaction.getElement());
+		String semaphoreFrom = balanceService.buildId(transaction.getFrom(), transaction.getElement());
 
 		semaphoreService.execute(semaphoreFrom, _ -> {
 			BalanceDoc balanceFrom = balanceService.get(transaction.getFrom(), transaction.getElement());
@@ -132,32 +134,29 @@ public class PaymentService {
 				DynamicSequenceDoc dynamicSequence = dynamicSequenceService.get(transaction.getElement());
 				transaction.setPreviousId(dynamicSequence.getData());
 				transaction.setId(Hasher.sha3Hex(Strings.concatenate(transaction.getPreviousId(), transaction.getHash())));
-
-				Long blockNumber = blockService.addTransactionToBlock(transaction);
-				transaction.setBlock(blockNumber);
-
 				mongoMain.save(transaction, transaction.getLedger());
+
 				dynamicSequenceService.set(transaction.getElement(), transaction.getId());
 			});
 
 			balanceService.set(balanceFrom, balanceFrom.getAmount().subtract(transaction.getTotal()));
-
-			String semaphoreTo = balanceService.getId(transaction.getTo(), transaction.getElement());
-
-			semaphoreService.execute(semaphoreTo, _ -> {
-				BalanceDoc balanceTo = balanceService.get(transaction.getTo(), transaction.getElement());
-				balanceService.set(balanceTo, balanceTo.getAmount().add(transaction.getVolume()));
-			});
 		});
 
+		String semaphoreTo = balanceService.buildId(transaction.getTo(), transaction.getElement());
+
+		semaphoreService.execute(semaphoreTo, _ -> {
+			BalanceDoc balanceTo = balanceService.get(transaction.getTo(), transaction.getElement());
+			balanceService.set(balanceTo, balanceTo.getAmount().add(transaction.getVolume()));
+		});
+
+		Long blockNumber = blockService.addTransactionToBlock(transaction);
+		transaction.setBlock(blockNumber);
+		
+		Update update = Update.update("block", blockNumber);
+		mongoMain.update(Criteria.where("_id").is(transaction.getId()), update, TransactionDoc.class, transaction.getLedger());
+
 		captureTax(transaction, element);
-
-		// Add transaction to block
-		// Update update = Update.update("confirmed", true).set("block", blockId);
-		// mongoMain.update(Criteria.where("_id").is(transaction.getId()), update, TransactionDoc.class,
-		// transaction.getLedger());
-
-		return transaction; // mongoMain.id(, TransactionDoc.class, transaction.getLedger());
+		return transaction;
 	}
 
 	private void captureTax(TransactionDoc transaction, ElementDoc element) {
@@ -191,12 +190,12 @@ public class PaymentService {
 			transactionTax.setId(Hasher.sha3Hex(Strings.concatenate(transactionTax.getPreviousId(), transactionTax.getHash())));
 			Long blockNumber = blockService.addTransactionToBlock(transactionTax);
 			transaction.setBlock(blockNumber);
-			
+
 			mongoMain.save(transactionTax, transactionTax.getLedger());
 			dynamicSequenceService.set(transactionTax.getElement(), transactionTax.getId());
 		});
 
-		String semaphoreTo = balanceService.getId(transactionTax.getTo(), transactionTax.getElement());
+		String semaphoreTo = balanceService.buildId(transactionTax.getTo(), transactionTax.getElement());
 
 		semaphoreService.execute(semaphoreTo, _ -> {
 			BalanceDoc balanceTo = balanceService.get(transactionTax.getTo(), transactionTax.getElement());
@@ -207,8 +206,8 @@ public class PaymentService {
 //		Update update = Update.update("confirmed", true).set("block", blockNumber);
 //		mongoMain.update(Criteria.where("_id").is(transactionTax.getId()), update, TransactionDoc.class, transactionTax.getLedger());
 
-		//TransactionDoc result = mongoMain.id(transactionTax.getId(), TransactionDoc.class, transactionTax.getLedger());
-		//return messagingService.response(transaction.getHash(), result);
+		// TransactionDoc result = mongoMain.id(transactionTax.getId(), TransactionDoc.class, transactionTax.getLedger());
+		// return messagingService.response(transaction.getHash(), result);
 	}
 
 	/**
