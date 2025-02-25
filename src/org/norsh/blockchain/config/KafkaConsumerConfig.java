@@ -3,6 +3,7 @@ package org.norsh.blockchain.config;
 import java.util.List;
 import java.util.Properties;
 
+import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.StringDeserializer;
@@ -60,6 +61,7 @@ public class KafkaConsumerConfig {
         properties.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
         properties.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
         properties.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest"); // Ensures no messages are skipped
+        properties.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, "SSL");
 
         KafkaConsumer<String, String> consumer = new KafkaConsumer<>(properties);
 
