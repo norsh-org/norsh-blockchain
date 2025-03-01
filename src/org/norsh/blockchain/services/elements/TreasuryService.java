@@ -17,7 +17,7 @@ import org.norsh.exceptions.OperationStatus;
 import org.norsh.model.dtos.elements.TreasuryInfoDto;
 import org.norsh.model.transport.DataTransfer;
 import org.norsh.model.transport.Processable;
-import org.norsh.model.transport.RestMethod;
+import org.norsh.rest.RestMethod;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 

@@ -10,7 +10,7 @@ import org.norsh.exceptions.OperationException;
 import org.norsh.model.dtos.DistributedDto;
 import org.norsh.model.transport.DataTransfer;
 import org.norsh.model.transport.Processable;
-import org.norsh.model.transport.RestMethod;
+import org.norsh.rest.RestMethod;
 import org.norsh.util.Converter;
 import org.norsh.util.Logger;
 import org.springframework.context.ApplicationContext;
