@@ -2,7 +2,7 @@ package org.norsh.blockchain.config;
 
 import org.norsh.cache.RedisClient;
 import org.norsh.config.RedisConfig;
-import org.norsh.util.Logger;
+import org.norsh.util.Log;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
@@ -44,7 +44,7 @@ public class RedisClientConfig extends RedisClient {
      * @return a configured {@link RedisConnectionFactory} instance.
      */
     @Bean
-    public RedisConnectionFactory redisConnectionFactory(Logger log) {
+    public RedisConnectionFactory redisConnectionFactory(Log log) {
         RedisConfig redisConfig = BlockchainConfig.getInstance().getRedisConfig();
         
         if (redisConfig == null) {

@@ -11,7 +11,7 @@ import org.norsh.blockchain.services.queue.CacheService;
 import org.norsh.config.DefaultsConfig;
 import org.norsh.exceptions.InternalException;
 import org.norsh.security.Hasher;
-import org.norsh.util.Logger;
+import org.norsh.util.Log;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -54,7 +54,7 @@ public class SemaphoreService {
     private final Map<String, Object> synchronizedData = new ConcurrentHashMap<>();
 
     @Autowired
-    private Logger log;
+    private Log log;
 
     @Autowired
     private CacheService cacheService;

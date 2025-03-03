@@ -12,7 +12,7 @@ import org.norsh.model.transport.DataTransfer;
 import org.norsh.model.transport.Processable;
 import org.norsh.rest.RestMethod;
 import org.norsh.util.Converter;
-import org.norsh.util.Logger;
+import org.norsh.util.Log;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 
@@ -41,14 +41,14 @@ public class DispatcherService {
 
 	private final MessagingResponseService messagingService;
 	private final ApplicationContext context;
-	private final Logger log;
+	private final Log log;
 
 	/**
 	 * Constructs a new {@link DispatcherService}.
 	 *
 	 * @param context The Spring {@link ApplicationContext} to scan for service beans.
 	 */
-	public DispatcherService(MessagingResponseService messagingService, ApplicationContext context, Logger log) {
+	public DispatcherService(MessagingResponseService messagingService, ApplicationContext context, Log log) {
 		this.messagingService = messagingService;
 		this.context = context;
 		this.log = log;

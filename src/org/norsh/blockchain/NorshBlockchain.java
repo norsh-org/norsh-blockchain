@@ -4,7 +4,7 @@ import java.util.Calendar;
 
 import org.norsh.blockchain.config.BlockchainConfig;
 import org.norsh.blockchain.services.BootstrapSetup;
-import org.norsh.util.Logger;
+import org.norsh.util.Log;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.Banner;
 import org.springframework.boot.SpringApplication;
@@ -54,7 +54,7 @@ public class NorshBlockchain {
 	private BootstrapSetup bootstrapService;
 	
 	@Autowired
-	private Logger log;
+	private Log log;
 
 //	@Autowired
 //	private QueueConsumerService consumerService;

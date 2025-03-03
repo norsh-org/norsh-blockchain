@@ -20,7 +20,7 @@ import org.norsh.blockchain.services.utils.DynamicSequenceService;
 import org.norsh.blockchain.services.utils.SemaphoreService;
 import org.norsh.config.DefaultsConfig;
 import org.norsh.security.Hasher;
-import org.norsh.util.Logger;
+import org.norsh.util.Log;
 import org.norsh.util.Strings;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -47,7 +47,7 @@ public class BlockService {
     private DefaultsConfig defaultsConfig = BlockchainConfig.getInstance().getDefaultsConfig();
     
     @Autowired
-    private Logger log;
+    private Log log;
 
     @Autowired
     private MongoMain mongoMain;

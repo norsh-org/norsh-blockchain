@@ -2,7 +2,7 @@ package org.norsh.blockchain.services.utils;
 
 import org.norsh.blockchain.docs.utils.DynamicSequenceDoc;
 import org.norsh.blockchain.services.database.MongoMain;
-import org.norsh.util.Logger;
+import org.norsh.util.Log;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Update;
@@ -36,7 +36,7 @@ public class DynamicSequenceService {
     private MongoMain mongoMain;
 
     @Autowired
-    private Logger log;
+    private Log log;
 
     /**
      * Retrieves the {@link DynamicSequenceDoc} for a given ID.
