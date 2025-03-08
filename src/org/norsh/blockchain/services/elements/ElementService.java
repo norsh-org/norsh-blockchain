@@ -51,19 +51,8 @@ import com.mongodb.client.model.Updates;
  */
 //@Processable({ElementCreateDto.class, ElementGetDto.class, ElementMetadataDto.class, ElementNetworkDto.class})
 public class ElementService {
-//	private ElementTemplate elementTemplate = ElementTemplate.getDatabase();
-//	private DynamicSequenceService dynamicSequence = new DynamicSequenceService();
-//	private SemaphoreService semaphoreService = new SemaphoreService();
-
-
-//	@Autowired
 	private MessagingResponseService messagingService = new MessagingResponseService();
 
-//	@Autowired
-//	private TransactionService transactionService;
-
-//	@Autowired
-//	private PaymentService paymentService;
 
 	/**
 	 * Retrieves a Smart Element by its ID.
@@ -131,15 +120,15 @@ public class ElementService {
 			element.setPreviousId(dynamicSequence.getData());
 			element.setId(Hasher.sha3Hex(Strings.concatenate(element.getPreviousId(), element.getHash(), element.getTimestamp())));
 			
-			PaymentCreateDto paymentCreate = new PaymentCreateDto();
-			paymentCreate.setTo(S.norshCoin.getOwner());
-			paymentCreate.setElement(S.norshCoin.getId());
-			paymentCreate.setVolume(FeePolicy.getElementCreateAmount());
-			paymentCreate.setNonce(element.getTimestamp());
-			paymentCreate.setPublicKey(element.getPublicKey());
-			paymentCreate.setLink(element.getId());
-
-			//S.paymentService.internalTransaction(paymentCreate);
+//			PaymentCreateDto paymentCreate = new PaymentCreateDto();
+//			paymentCreate.setTo(S.norshCoin.getOwner());
+//			paymentCreate.setElement(S.norshCoin.getId());
+//			paymentCreate.setVolume(FeePolicy.getElementCreateAmount());
+//			paymentCreate.setNonce(element.getTimestamp());
+//			paymentCreate.setPublicKey(element.getPublicKey());
+//			paymentCreate.setLink(element.getId());
+//
+//			//S.paymentService.internalTransaction(paymentCreate);
 			S.elementTemplate.save(element);
 			
 			S.dynamicSequenceService.set(NorshConstants.getTagElements(), element.getId());

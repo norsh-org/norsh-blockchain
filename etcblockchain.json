@@ -53,7 +53,7 @@
 	},
 	
 	"mongo.main": {
-		"connectionString": "mongodb://admsys:094f8030dddbceaf4@dbsys.cluster-cquw5fqxz9ph.us-east-1.docdb.amazonaws.com:27017/?replicaSet=rs0&readPreference=secondaryPreferred&retryWrites=false",
+		"connectionString": "mongodb://admsys:094f8030dddbceaf4@dbsys.cluster-cquw5fqxz9ph.us-east-1.docdb.amazonaws.com:27017/?replicaSet=rs0&readPreference=primaryPreferred&retryWrites=false",
 		"database": "norsh"
 	},
 	

@@ -20,56 +20,56 @@ import com.mongodb.client.MongoDatabase;
  * @author Danthur Lice
  */
 public class MongoConnectionConfig {
-    private MongoClient mongoClient = null;
-    private MongoDatabase mongoDatabase = null;
+	private MongoClient mongoClient = null;
+	private MongoDatabase mongoDatabase = null;
 
-    /**
-     * Returns a singleton instance of MongoDatabase.
-     * If the instance is not initialized, it creates a new one.
-     *
-     * @return MongoDatabase instance.
-     */
-    public synchronized MongoDatabase getDatabase() {
-    	MongoConfig mainConfig = S.config.getMongoConfig("main");
-    	
-        if (mongoDatabase != null) {
-            return mongoDatabase;
-        }
+	/**
+	 * Returns a singleton instance of MongoDatabase.
+	 * If the instance is not initialized, it creates a new one.
+	 *
+	 * @return MongoDatabase instance.
+	 */
+	public synchronized MongoDatabase getDatabase() {
+		MongoConfig mainConfig = S.config.getMongoConfig("main");
 
-        CodecRegistry pojoCodecRegistry = CodecRegistries.fromProviders(
-                PojoCodecProvider.builder().automatic(true).build()
-        );
+		if (mongoDatabase != null) {
+			return mongoDatabase;
+		}
 
-        CodecRegistry codecRegistry = CodecRegistries.fromRegistries(
-                MongoClientSettings.getDefaultCodecRegistry(), pojoCodecRegistry
-        );
+		CodecRegistry pojoCodecRegistry = CodecRegistries.fromProviders(
+				PojoCodecProvider.builder().automatic(true).build()
+				);
 
-        mongoClient = MongoClients.create(mainConfig.getConnectionString());
-        mongoDatabase = mongoClient.getDatabase(mainConfig.getDatabase()).withCodecRegistry(codecRegistry);
+		CodecRegistry codecRegistry = CodecRegistries.fromRegistries(
+				MongoClientSettings.getDefaultCodecRegistry(), pojoCodecRegistry
+				);
 
-        cleanupConfig();
-        return mongoDatabase;
-    }
+		mongoClient = MongoClients.create(mainConfig.getConnectionString());
+		mongoDatabase = mongoClient.getDatabase(mainConfig.getDatabase()).withCodecRegistry(codecRegistry);
 
-    /**
-     * Closes the MongoDB connection.
-     * This method should be called when the application shuts down.
-     */
-    public synchronized void close() {
-        if (mongoClient != null) {
-            mongoClient.close();
-            mongoClient = null;
-            mongoDatabase = null;
-        }
-    }
+		cleanupConfig();
+		return mongoDatabase;
+	}
 
-    /**
-     * Cleans up the MongoDB configuration from BlockchainConfig.
-     * Ensures that after initialization, unnecessary configurations are removed.
-     */
-    private void cleanupConfig() {
-        if (mongoDatabase != null) {
-            S.config.clearMongoConfig("main");
-        }
-    }
+	/**
+	 * Closes the MongoDB connection.
+	 * This method should be called when the application shuts down.
+	 */
+	public synchronized void close() {
+		if (mongoClient != null) {
+			mongoClient.close();
+			mongoClient = null;
+			mongoDatabase = null;
+		}
+	}
+
+	/**
+	 * Cleans up the MongoDB configuration from BlockchainConfig.
+	 * Ensures that after initialization, unnecessary configurations are removed.
+	 */
+	private void cleanupConfig() {
+		if (mongoDatabase != null) {
+			S.config.clearMongoConfig("main");
+		}
+	}
 }
