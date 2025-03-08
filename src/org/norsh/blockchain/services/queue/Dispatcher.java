@@ -117,11 +117,12 @@ public class Dispatcher {
 					Object result = method.invoke(serviceInstance, dto);
 					return messagingService.response(dto.getRequestId(), result);
 				} catch (InvocationTargetException ex) {
+					ex.printStackTrace();
+					
 					if (ex.getCause() instanceof OperationException) {
 						OperationException ox = (OperationException) ex.getCause();
 						return messagingService.response(dto.getRequestId(), ox.getOperationStatus(), ox.getData());
 					} else {
-						ex.printStackTrace();
 						return null;
 					}
 				}
