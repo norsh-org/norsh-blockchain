@@ -51,7 +51,7 @@ public class NorshBlockchain {
 //		app.run(args);
 		
 		Log log = S.log;
-		log.system("Norsh Blockchain");
+		log.system("Norsh Blockchain ○ ●●");
 		log.system("Developed by " + String.join(", ", "Danthur Lice") + " and contributors.");
 		log.system(String.format("Copyright © 2024-%s Norsh. All rights reserved", Calendar.getInstance().get(Calendar.YEAR)));
 		log.system(String.format("Server address: %s:%s", S.config.getSpringProperties().get("server.host"), S.config.getSpringProperties().get("server.port")));
