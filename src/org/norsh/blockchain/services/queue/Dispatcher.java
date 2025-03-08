@@ -114,7 +114,11 @@ public class Dispatcher {
 				// Retrieve the service instance and invoke the processing method
 				Object serviceInstance = serviceRegistry.get(method.getDeclaringClass().getCanonicalName());
 				try {
+					System.out.println("method: " + method);
+
 					Object result = method.invoke(serviceInstance, dto);
+					System.out.println("RESULT: " + result + "\n\n\n");
+					
 					return messagingService.response(dto.getRequestId(), result);
 				} catch (InvocationTargetException ex) {
 					ex.printStackTrace();

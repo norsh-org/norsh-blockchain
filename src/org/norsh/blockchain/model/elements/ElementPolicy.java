@@ -88,7 +88,7 @@ public class ElementPolicy {
      * movement of funds, ensuring compliance with predefined holding periods.
      * </p>
      */
-    private Integer freezeDuration;
+    private Integer freezeDuration; 
 
     /**
      * The execution script associated with the Smart Element.
