@@ -8,6 +8,7 @@ import org.norsh.rest.RestMethod;
 import org.norsh.rest.RestRequest;
 import org.norsh.rest.RestResponse;
 import org.norsh.rest.annotations.Mapping;
+import org.norsh.util.Converter;
 
 /**
  * Abstract base class for API version 1 controllers.
@@ -48,6 +49,9 @@ public class DataTransferApiV1 {
 	public void processRequest(RestRequest restRequest, RestResponse restResponse) throws IOException {
 		DataTransfer dto = restRequest.getBody(DataTransfer.class);
 		DataTransfer result = S.dispatcher.dispatch(dto);
+		
+		System.out.println("*** " + Converter.toJson(result));
+		
 		restResponse.setBody(result);
 	}
 }
