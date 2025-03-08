@@ -2,12 +2,9 @@ package org.norsh.blockchain.services;
 
 import java.math.BigDecimal;
 
-import org.norsh.blockchain.docs.transactions.BalanceDoc;
-import org.norsh.blockchain.services.database.MongoMain;
-import org.norsh.util.Log;
+import org.norsh.blockchain.S;
+import org.norsh.blockchain.model.transactions.BalanceDoc;
 import org.norsh.util.Strings;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
 
 /**
  * Service for managing balances associated with owners and tokens.
@@ -28,14 +25,7 @@ import org.springframework.stereotype.Service;
  * @author Danthur Lice
  * @see <a href="https://docs.norsh.org">Norsh Documentation</a>
  */
-@Service
 public class BalanceService {
-	@Autowired
-	private MongoMain mongoMain;
-	
-	@Autowired
-	private Log log;
-
 	public String buildId(String owner, String token) {
 		return Strings.concatenateWithSymbol("_", owner, token);
 	}
@@ -52,7 +42,7 @@ public class BalanceService {
 	 */
 	public BalanceDoc get(String owner, String token) {
 		String id = buildId(owner, token);
-		BalanceDoc balance = mongoMain.id(id, BalanceDoc.class);
+		BalanceDoc balance = S.balanceTemplate.id(id);
 
 		if (balance == null) {
 			balance = new BalanceDoc();
@@ -61,7 +51,7 @@ public class BalanceService {
 			balance.setOwner(owner);
 			balance.setAmount(BigDecimal.valueOf(10_000));
 		} else {
-			log.debug("Balance retrieved successfully for owner: " + owner + ", token: " + token, balance);
+			S.log.debug("Balance retrieved successfully for owner: " + owner + ", token: " + token, balance);
 		}
 
 		return balance;
@@ -73,12 +63,22 @@ public class BalanceService {
 	}
 	
 	public BalanceDoc save(BalanceDoc balance) {
-		mongoMain.save(balance);
-		return balance;
+		return S.balanceTemplate.save(balance);
 	}
 	
 	public Boolean hasBalance(String owner, String token, BigDecimal amount) {
 		BalanceDoc balanceFrom = get(owner, token);
 		return balanceFrom.getAmount().compareTo(amount) >= 0;
+	}
+	
+	public static void main(String[] args) {
+		BalanceDoc b = new BalanceDoc();
+		b.setId("123");
+		b.setAmount(new BigDecimal("123.123456789012345678"));
+		
+
+		S.balanceTemplate.save(b);
+		
+		System.out.println(S.balanceTemplate.list());
 	}
 }

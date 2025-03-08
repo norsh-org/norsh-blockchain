@@ -1,11 +1,10 @@
-package org.norsh.blockchain.docs.transactions;
+package org.norsh.blockchain.model.transactions;
 
 import java.math.BigDecimal;
 import java.util.Map;
 
+import org.norsh.blockchain.model.ADoc;
 import org.norsh.model.types.TransactionType;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.Document;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
@@ -36,20 +35,8 @@ import lombok.Setter;
  */
 @Setter
 @Getter
-@Document("ledger_w")
 @JsonInclude(Include.NON_NULL)
-public class TransactionDoc {
-	/**
-	 * Unique identifier for the transaction.
-	 * <p>
-	 * The transaction ID is linked with the previous transaction's ID, forming a chain within the ledger.
-	 * It is computed by concatenating the previous transaction ID, the transaction's hash, and the timestamp,
-	 * then applying a SHA-3 hash.
-	 * </p>
-	 */
-	@Id
-	private String id;
-
+public class TransactionDoc extends ADoc {
 	/**
 	 * Identifier of the previous transaction.
 	 * <p>

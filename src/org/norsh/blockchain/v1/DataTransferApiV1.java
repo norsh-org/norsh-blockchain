@@ -1,16 +1,13 @@
 package org.norsh.blockchain.v1;
 
-import org.norsh.blockchain.services.queue.DispatcherService;
-import org.norsh.model.transport.DataTransfer;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RestController;
+import java.io.IOException;
 
-import jakarta.servlet.http.HttpServletRequest;
+import org.norsh.blockchain.S;
+import org.norsh.model.transport.DataTransfer;
+import org.norsh.rest.RestMethod;
+import org.norsh.rest.RestRequest;
+import org.norsh.rest.RestResponse;
+import org.norsh.rest.annotations.Mapping;
 
 /**
  * Abstract base class for API version 1 controllers.
@@ -37,25 +34,20 @@ import jakarta.servlet.http.HttpServletRequest;
  * @author Danthur Lice
  * @see <a href="https://docs.norsh.org">Norsh Documentation</a>
  */
-@RestController
-@RequestMapping("/v1/blockchain")
+@Mapping("/v1/blockchain")
 public class DataTransferApiV1 {
-	@Autowired
-	protected HttpServletRequest servletRequest;
-	
-	@Autowired
-	private DispatcherService dispatcherService;
-
 	/**
 	 * Processes a Smart Element request, forwarding it to the queue and caching its status.
 	 *
 	 * @param request The unique request identifier.
 	 * @param data    The payload to be sent to the processing queue.
 	 * @return a response confirming that the request has been accepted for processing.
+	 * @throws IOException 
 	 */
-	@RequestMapping(method = RequestMethod.POST)
-	public ResponseEntity<Object> processRequest(@RequestBody DataTransfer transfer) {
-		DataTransfer result = dispatcherService.dispatch(transfer);
-		return ResponseEntity.status(HttpStatus.OK).body(result);
+	@Mapping(method = RestMethod.POST)
+	public void processRequest(RestRequest restRequest, RestResponse restResponse) throws IOException {
+		DataTransfer dto = restRequest.getBody(DataTransfer.class);
+		DataTransfer result = S.dispatcher.dispatch(dto);
+		restResponse.setBody(result);
 	}
 }

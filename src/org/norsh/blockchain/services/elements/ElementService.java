@@ -1,39 +1,32 @@
 package org.norsh.blockchain.services.elements;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
-import org.norsh.blockchain.components.NorshCoin;
+import org.bson.conversions.Bson;
+import org.norsh.blockchain.S;
 import org.norsh.blockchain.components.NorshConstants;
-import org.norsh.blockchain.docs.elements.ElementDoc;
-import org.norsh.blockchain.docs.elements.ElementStatus;
-import org.norsh.blockchain.docs.utils.DynamicSequenceDoc;
-import org.norsh.blockchain.services.database.MongoMain;
-import org.norsh.blockchain.services.database.MongoRead;
+import org.norsh.blockchain.model.elements.ElementDoc;
+import org.norsh.blockchain.model.elements.ElementStatus;
+import org.norsh.blockchain.model.utils.DynamicSequenceDoc;
 import org.norsh.blockchain.services.queue.MessagingResponseService;
-import org.norsh.blockchain.services.transactions.PaymentService;
-import org.norsh.blockchain.services.transactions.TransactionService;
-import org.norsh.blockchain.services.utils.DynamicSequenceService;
-import org.norsh.blockchain.services.utils.SemaphoreService;
 import org.norsh.constants.FeePolicy;
 import org.norsh.exceptions.OperationException;
 import org.norsh.exceptions.OperationStatus;
 import org.norsh.model.dtos.elements.ElementCreateDto;
 import org.norsh.model.dtos.elements.ElementGetDto;
 import org.norsh.model.dtos.elements.ElementMetadataDto;
-import org.norsh.model.dtos.elements.ElementNetworkDto;
-import org.norsh.model.dtos.elements.ElementPolicyDto;
 import org.norsh.model.dtos.transactions.PaymentCreateDto;
 import org.norsh.model.transport.DataTransfer;
 import org.norsh.model.transport.Processable;
-import org.norsh.model.types.ElementType;
 import org.norsh.rest.RestMethod;
 import org.norsh.security.Hasher;
 import org.norsh.util.Converter;
 import org.norsh.util.Strings;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.mongodb.core.query.Criteria;
-import org.springframework.data.mongodb.core.query.Update;
-import org.springframework.stereotype.Service;
+
+import com.mongodb.client.model.Filters;
+import com.mongodb.client.model.Updates;
 
 /**
  * Smart Element Management Service.
@@ -56,32 +49,21 @@ import org.springframework.stereotype.Service;
  * @author Danthur Lice
  * @see <a href="https://docs.norsh.org">Norsh Documentation</a>
  */
-@Service
 //@Processable({ElementCreateDto.class, ElementGetDto.class, ElementMetadataDto.class, ElementNetworkDto.class})
 public class ElementService {
-	@Autowired
-	private NorshCoin norshCoin;
+//	private ElementTemplate elementTemplate = ElementTemplate.getDatabase();
+//	private DynamicSequenceService dynamicSequence = new DynamicSequenceService();
+//	private SemaphoreService semaphoreService = new SemaphoreService();
 
-	@Autowired
-	private DynamicSequenceService dynamicSequenceService;
 
-	@Autowired
-	private SemaphoreService semaphoreService;
+//	@Autowired
+	private MessagingResponseService messagingService = new MessagingResponseService();
 
-	@Autowired
-	private MongoMain mongoMain;
+//	@Autowired
+//	private TransactionService transactionService;
 
-	@Autowired
-	private MongoRead mongoRead;
-
-	@Autowired
-	private MessagingResponseService messagingService;
-
-	@Autowired
-	private TransactionService transactionService;
-
-	@Autowired
-	private PaymentService paymentService;
+//	@Autowired
+//	private PaymentService paymentService;
 
 	/**
 	 * Retrieves a Smart Element by its ID.
@@ -92,7 +74,7 @@ public class ElementService {
 	 */
 	@Processable(method = RestMethod.GET)
 	public DataTransfer getElement(ElementGetDto dto) {
-		ElementDoc element = mongoRead.id(dto.getId(), ElementDoc.class);
+		ElementDoc element = S.elementTemplate.id(dto.getId());
 
 		if (element != null) {
 			return messagingService.response(dto.getId(), element);
@@ -122,7 +104,7 @@ public class ElementService {
 		dto.validate();
 
 		// Check if the element already exists.
-		if (mongoMain.exists(Criteria.where("hash").is(dto.getHash()), ElementDoc.class))
+		if (S.elementTemplate.exists(Filters.eq("hash", dto.getHash())))
 			throw new OperationException(OperationStatus.EXISTS, "Element exists");
 
 		String owner = Hasher.sha3Hex(Converter.base64OrHexToBytes(dto.getPublicKey()));
@@ -144,26 +126,26 @@ public class ElementService {
 		element.setStatus(ElementStatus.PENDING);
 
 		// Save the Smart Element using a semaphore lock to ensure atomic updates and consistency.
-		semaphoreService.execute(NorshConstants.getTagElements(), _ -> {
-			DynamicSequenceDoc dynamicSequence = dynamicSequenceService.get(NorshConstants.getTagElements());
+		S.semaphoreService.execute(NorshConstants.getTagElements(), _ -> {
+			DynamicSequenceDoc dynamicSequence = S.dynamicSequenceService.get(NorshConstants.getTagElements());
 			element.setPreviousId(dynamicSequence.getData());
 			element.setId(Hasher.sha3Hex(Strings.concatenate(element.getPreviousId(), element.getHash(), element.getTimestamp())));
 			
 			PaymentCreateDto paymentCreate = new PaymentCreateDto();
-			paymentCreate.setTo(norshCoin.getOwner());
-			paymentCreate.setElement(norshCoin.getId());
+			paymentCreate.setTo(S.norshCoin.getOwner());
+			paymentCreate.setElement(S.norshCoin.getId());
 			paymentCreate.setVolume(FeePolicy.getElementCreateAmount());
 			paymentCreate.setNonce(element.getTimestamp());
 			paymentCreate.setPublicKey(element.getPublicKey());
 			paymentCreate.setLink(element.getId());
 
-			paymentService.internalTransaction(paymentCreate);
-			mongoMain.save(element);
+			//S.paymentService.internalTransaction(paymentCreate);
+			S.elementTemplate.save(element);
 			
-			dynamicSequenceService.set(NorshConstants.getTagElements(), element.getId());
+			S.dynamicSequenceService.set(NorshConstants.getTagElements(), element.getId());
 		});
 
-		return mongoMain.id(element.getId(), ElementDoc.class);
+		return S.elementTemplate.id(element.getId());
 	}
 
 	/**
@@ -187,7 +169,7 @@ public class ElementService {
 	 */
 	@Processable(method = RestMethod.PUT)
 	public DataTransfer setMetadata(ElementMetadataDto dto) {
-		ElementDoc element = mongoMain.id(dto.getId(), ElementDoc.class);
+		ElementDoc element = S.elementTemplate.id(dto.getId());
 
 		try {
 			dto.validate();
@@ -210,7 +192,7 @@ public class ElementService {
 				return messagingService.response(dto.getHash(), OperationStatus.ERROR, ex.getMessage());
 			}
 
-			DataTransfer transactionTransport = transactionService.createTransaction(dto.getTransaction(), e -> { e.setMetadata(Map.of("element", element.getId(), "action", "UPDATE", "child", "metadata")); });
+			DataTransfer transactionTransport = S.transactionService.createTransaction(dto.getTransaction(), e -> { e.setMetadata(Map.of("element", element.getId(), "action", "UPDATE", "child", "metadata")); });
 
 			if (transactionTransport.getStatus() != OperationStatus.OK) {
 				return transactionTransport;
@@ -219,181 +201,180 @@ public class ElementService {
 
 		// Utility to set updates based on provided data.
 		var updateUtil = new Object() {
-			void set(Update update, String field, String value) {
+			void set(List<Bson> updates, String field, String value) {
 				if (value != null) {
 					if (value.isBlank()) {
-						update.unset(field); // Remove field if empty.
+						updates.add(Updates.unset(field)); // Remove field if empty.
 					} else {
-						update.set(field, value); // Update field if not empty.
+						updates.add(Updates.set(field, value)); // Update field if not empty.
 					}
 				}
 			}
 		};
 
 		// Build the update operation for metadata fields.
-		Update update = new Update();
-		updateUtil.set(update, "metadata.name", dto.getName());
-		updateUtil.set(update, "metadata.about", dto.getAbout());
-		updateUtil.set(update, "metadata.logo", dto.getLogo());
-		updateUtil.set(update, "metadata.site", dto.getSite());
-		updateUtil.set(update, "metadata.policy", dto.getPolicy());
+		List<Bson> updates = new ArrayList<>();
+		//Update update = new Update();
+		updateUtil.set(updates, "metadata.name", dto.getName());
+		updateUtil.set(updates, "metadata.about", dto.getAbout());
+		updateUtil.set(updates, "metadata.logo", dto.getLogo());
+		updateUtil.set(updates, "metadata.site", dto.getSite());
+		updateUtil.set(updates, "metadata.policy", dto.getPolicy());
 
-		// Execute the update in MongoDB.
-		Criteria criteria = Criteria.where("_id").is(dto.getId());
-		mongoMain.update(criteria, update, ElementDoc.class);
-
-		return messagingService.response(dto.getHash(), mongoMain.id(dto.getId(), ElementDoc.class));
+		S.elementTemplate.update(Filters.eq("_id", dto.getId()), Updates.combine(updates.toArray(new Bson[0])));
+		
+		return messagingService.response(dto.getHash(), S.elementTemplate.id(dto.getId()));
 	}
 
-	/**
-	 * Updates the policy of a Smart Element.
-	 * <p>
-	 * This method validates the update request and applies changes to the element's policy fields. If the policy already
-	 * exists, updating it may require an associated charge transaction. The transaction's reference information is set to
-	 * "ELEMENT|POLICY|UPDATE" to indicate a policy update operation.
-	 * </p>
-	 *
-	 * @param dto the {@link ElementPolicyDto} containing the new policy details.
-	 * @return a {@link DataTransfer} object with the updated element data or an error status if the update fails.
-	 */
-	@Processable(method = RestMethod.PUT)
-	public DataTransfer setPolicy(ElementPolicyDto dto) {
-		ElementDoc element = mongoMain.id(dto.getId(), ElementDoc.class);
-
-		try {
-			dto.validate();
-		} catch (Exception ex) {
-			return messagingService.response(dto.getHash(), OperationStatus.ERROR, ex.getMessage());
-		}
-
-		String owner = Hasher.sha3Hex(Converter.base64OrHexToBytes(dto.getPublicKey()));
-		if (element == null) {
-			return messagingService.response(dto.getHash(), OperationStatus.NOT_FOUND);
-		} else if (!element.getOwner().equals(owner)) {
-			return messagingService.response(dto.getHash(), OperationStatus.FORBIDDEN);
-		}
-
-		// Execute a charge transaction for the policy update if the policy already exists.
-		if (element.getPolicy() != null) {
-			try {
-				// dto.validateTransaction();
-			} catch (Exception ex) {
-				return messagingService.response(dto.getHash(), OperationStatus.ERROR, ex.getMessage());
-			}
-
-			DataTransfer transactionTransport = transactionService.createTransaction(dto.getTransaction(), e -> { e.setMetadata(Map.of("element", element.getId(), "action", "UPDATE", "child", "policy")); });
-
-			if (transactionTransport.getStatus() != OperationStatus.OK) {
-				return transactionTransport;
-			}
-		}
-
-		// Utility to set updates on policy fields.
-		var updateUtil = new Object() {
-			void set(Update update, String field, Object value) {
-				if (value != null) {
-					if (value.toString().isBlank()) {
-						update.unset(field); // Remove field if empty.
-					} else {
-						update.set(field, value); // Update field if not empty.
-					}
-				}
-			}
-		};
-
-		// Build the update operation for policy fields.
-		Update update = new Update();
-		updateUtil.set(update, "policy.transactionTax", dto.getTransactionTax());
-		updateUtil.set(update, "policy.freezeDuration", dto.getFreezeDuration());
-		updateUtil.set(update, "policy.script", dto.getScript());
-
-		// Execute the update in MongoDB.
-		Criteria criteria = Criteria.where("_id").is(dto.getId());
-		mongoMain.update(criteria, update, ElementDoc.class);
-
-		return messagingService.response(dto.getHash(), mongoMain.id(dto.getId(), ElementDoc.class));
-	}
-
-	/**
-	 * Updates or adds a network association for a Smart Element.
-	 *
-	 * @param dto the {@link ElementNetworkDto} containing the network association details.
-	 * @return a {@link DataTransfer} object with the updated element data or an error status.
-	 */
-	@Processable(method = RestMethod.PUT)
-	public DataTransfer setNetwork(ElementNetworkDto dto) {
-		return setNetwork(dto, false);
-	}
-
-	/**
-	 * Removes a network association from a Smart Element.
-	 *
-	 * @param dto the {@link ElementNetworkDto} containing the network association details.
-	 * @return a {@link DataTransfer} object with the updated element data or an error status.
-	 */
-	@Processable(method = RestMethod.DELETE)
-	public DataTransfer deleteNetwork(ElementNetworkDto dto) {
-		return setNetwork(dto, true);
-	}
-
-	/**
-	 * Internal method to update or remove a network association for a Smart Element.
-	 * <p>
-	 * This method is used by both {@link #setNetwork(ElementNetworkDto)} and {@link #deleteNetwork(ElementNetworkDto)} to
-	 * modify the network association for PROXY type elements. It validates that the element exists and is of type PROXY. If
-	 * monitored networks exist, a charge transaction is executed. The transaction's reference information is set to
-	 * "ELEMENT|NETWORK|UPDATE" to indicate a network update operation.
-	 * </p>
-	 *
-	 * @param dto    the {@link ElementNetworkDto} containing network details.
-	 * @param delete if {@code true}, removes the association; if {@code false}, adds/updates the association.
-	 * @return a {@link DataTransfer} object with the updated element data or an error status.
-	 */
-	private DataTransfer setNetwork(ElementNetworkDto dto, Boolean delete) {
-		ElementDoc element = mongoMain.id(dto.getId(), ElementDoc.class);
-
-		try {
-			dto.validate();
-		} catch (Exception ex) {
-			return messagingService.response(dto.getHash(), OperationStatus.ERROR, ex.getMessage());
-		}
-
-		String owner = Hasher.sha3Hex(Converter.base64OrHexToBytes(dto.getPublicKey()));
-		if (element == null) {
-			return messagingService.response(dto.getHash(), OperationStatus.NOT_FOUND);
-		} else if (!element.getOwner().equals(owner)) {
-			return messagingService.response(dto.getHash(), OperationStatus.FORBIDDEN);
-		} else if (element.getType() != ElementType.PROXY) {
-			return messagingService.response(dto.getHash(), OperationStatus.ERROR, "This element is not a proxy");
-		}
-
-		// Execute a charge transaction for the network update if monitored networks exist.
-		if (element.getMonitoredNetworks() != null) {
-			try {
-				// dto.validateTransaction();
-			} catch (Exception ex) {
-				return messagingService.response(dto.getHash(), OperationStatus.ERROR, ex.getMessage());
-			}
-
-			DataTransfer transactionTransport = transactionService.createTransaction(dto.getTransaction(), e -> { e.setMetadata(Map.of("element", element.getId(), "action", "UPDATE", "child", "network")); });
-
-			if (transactionTransport.getStatus() != OperationStatus.OK) {
-				return transactionTransport;
-			}
-		}
-
-		// Build the update operation for the network association.
-		Update update = new Update();
-		if (delete) {
-			update.unset("monitoredNetworks." + dto.getAddress());
-		} else {
-			update.set("monitoredNetworks." + dto.getAddress(), dto.getNetwork());
-		}
-
-		// Execute the update in MongoDB.
-		Criteria criteria = Criteria.where("_id").is(dto.getId());
-		mongoMain.update(criteria, update, ElementDoc.class);
-
-		return messagingService.response(dto.getHash(), mongoMain.id(dto.getId(), ElementDoc.class));
-	}
+//	/**
+//	 * Updates the policy of a Smart Element.
+//	 * <p>
+//	 * This method validates the update request and applies changes to the element's policy fields. If the policy already
+//	 * exists, updating it may require an associated charge transaction. The transaction's reference information is set to
+//	 * "ELEMENT|POLICY|UPDATE" to indicate a policy update operation.
+//	 * </p>
+//	 *
+//	 * @param dto the {@link ElementPolicyDto} containing the new policy details.
+//	 * @return a {@link DataTransfer} object with the updated element data or an error status if the update fails.
+//	 */
+//	@Processable(method = RestMethod.PUT)
+//	public DataTransfer setPolicy(ElementPolicyDto dto) {
+//		ElementDoc element = elementTemplate.id(dto.getId());
+//
+//		try {
+//			dto.validate();
+//		} catch (Exception ex) {
+//			return messagingService.response(dto.getHash(), OperationStatus.ERROR, ex.getMessage());
+//		}
+//
+//		String owner = Hasher.sha3Hex(Converter.base64OrHexToBytes(dto.getPublicKey()));
+//		if (element == null) {
+//			return messagingService.response(dto.getHash(), OperationStatus.NOT_FOUND);
+//		} else if (!element.getOwner().equals(owner)) {
+//			return messagingService.response(dto.getHash(), OperationStatus.FORBIDDEN);
+//		}
+//
+//		// Execute a charge transaction for the policy update if the policy already exists.
+//		if (element.getPolicy() != null) {
+//			try {
+//				// dto.validateTransaction();
+//			} catch (Exception ex) {
+//				return messagingService.response(dto.getHash(), OperationStatus.ERROR, ex.getMessage());
+//			}
+//
+//			DataTransfer transactionTransport = transactionService.createTransaction(dto.getTransaction(), e -> { e.setMetadata(Map.of("element", element.getId(), "action", "UPDATE", "child", "policy")); });
+//
+//			if (transactionTransport.getStatus() != OperationStatus.OK) {
+//				return transactionTransport;
+//			}
+//		}
+//
+//		// Utility to set updates on policy fields.
+//		var updateUtil = new Object() {
+//			void set(Update update, String field, Object value) {
+//				if (value != null) {
+//					if (value.toString().isBlank()) {
+//						update.unset(field); // Remove field if empty.
+//					} else {
+//						update.set(field, value); // Update field if not empty.
+//					}
+//				}
+//			}
+//		};
+//
+//		// Build the update operation for policy fields.
+//		Update update = new Update();
+//		updateUtil.set(update, "policy.transactionTax", dto.getTransactionTax());
+//		updateUtil.set(update, "policy.freezeDuration", dto.getFreezeDuration());
+//		updateUtil.set(update, "policy.script", dto.getScript());
+//
+//		// Execute the update in MongoDB.
+//		Criteria criteria = Criteria.where("_id").is(dto.getId());
+//		mongoMain.update(criteria, update, ElementDoc.class);
+//
+//		return messagingService.response(dto.getHash(), mongoMain.id(dto.getId(), ElementDoc.class));
+//	}
+//
+//	/**
+//	 * Updates or adds a network association for a Smart Element.
+//	 *
+//	 * @param dto the {@link ElementNetworkDto} containing the network association details.
+//	 * @return a {@link DataTransfer} object with the updated element data or an error status.
+//	 */
+//	@Processable(method = RestMethod.PUT)
+//	public DataTransfer setNetwork(ElementNetworkDto dto) {
+//		return setNetwork(dto, false);
+//	}
+//
+//	/**
+//	 * Removes a network association from a Smart Element.
+//	 *
+//	 * @param dto the {@link ElementNetworkDto} containing the network association details.
+//	 * @return a {@link DataTransfer} object with the updated element data or an error status.
+//	 */
+//	@Processable(method = RestMethod.DELETE)
+//	public DataTransfer deleteNetwork(ElementNetworkDto dto) {
+//		return setNetwork(dto, true);
+//	}
+//
+//	/**
+//	 * Internal method to update or remove a network association for a Smart Element.
+//	 * <p>
+//	 * This method is used by both {@link #setNetwork(ElementNetworkDto)} and {@link #deleteNetwork(ElementNetworkDto)} to
+//	 * modify the network association for PROXY type elements. It validates that the element exists and is of type PROXY. If
+//	 * monitored networks exist, a charge transaction is executed. The transaction's reference information is set to
+//	 * "ELEMENT|NETWORK|UPDATE" to indicate a network update operation.
+//	 * </p>
+//	 *
+//	 * @param dto    the {@link ElementNetworkDto} containing network details.
+//	 * @param delete if {@code true}, removes the association; if {@code false}, adds/updates the association.
+//	 * @return a {@link DataTransfer} object with the updated element data or an error status.
+//	 */
+//	private DataTransfer setNetwork(ElementNetworkDto dto, Boolean delete) {
+//		ElementDoc element = elementTemplate.id(dto.getId());
+//
+//		try {
+//			dto.validate();
+//		} catch (Exception ex) {
+//			return messagingService.response(dto.getHash(), OperationStatus.ERROR, ex.getMessage());
+//		}
+//
+//		String owner = Hasher.sha3Hex(Converter.base64OrHexToBytes(dto.getPublicKey()));
+//		if (element == null) {
+//			return messagingService.response(dto.getHash(), OperationStatus.NOT_FOUND);
+//		} else if (!element.getOwner().equals(owner)) {
+//			return messagingService.response(dto.getHash(), OperationStatus.FORBIDDEN);
+//		} else if (element.getType() != ElementType.PROXY) {
+//			return messagingService.response(dto.getHash(), OperationStatus.ERROR, "This element is not a proxy");
+//		}
+//
+//		// Execute a charge transaction for the network update if monitored networks exist.
+//		if (element.getMonitoredNetworks() != null) {
+//			try {
+//				// dto.validateTransaction();
+//			} catch (Exception ex) {
+//				return messagingService.response(dto.getHash(), OperationStatus.ERROR, ex.getMessage());
+//			}
+//
+//			DataTransfer transactionTransport = transactionService.createTransaction(dto.getTransaction(), e -> { e.setMetadata(Map.of("element", element.getId(), "action", "UPDATE", "child", "network")); });
+//
+//			if (transactionTransport.getStatus() != OperationStatus.OK) {
+//				return transactionTransport;
+//			}
+//		}
+//
+//		// Build the update operation for the network association.
+//		Update update = new Update();
+//		if (delete) {
+//			update.unset("monitoredNetworks." + dto.getAddress());
+//		} else {
+//			update.set("monitoredNetworks." + dto.getAddress(), dto.getNetwork());
+//		}
+//
+//		// Execute the update in MongoDB.
+//		Criteria criteria = Criteria.where("_id").is(dto.getId());
+//		mongoMain.update(criteria, update, ElementDoc.class);
+//
+//		return messagingService.response(dto.getHash(), mongoMain.id(dto.getId(), ElementDoc.class));
+//	}
 }

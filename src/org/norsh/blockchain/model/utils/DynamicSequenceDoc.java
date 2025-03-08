@@ -1,7 +1,7 @@
-package org.norsh.blockchain.docs.utils;
+package org.norsh.blockchain.model.utils;
 
-import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.Document;
+import org.norsh.blockchain.model.ADoc;
+
 import lombok.Getter;
 import lombok.Setter;
 
@@ -26,8 +26,7 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-@Document("sequences")
-public class DynamicSequenceDoc {
+public class DynamicSequenceDoc extends ADoc {
 
     /**
      * Unique identifier for the record.
@@ -35,7 +34,6 @@ public class DynamicSequenceDoc {
      * This ID corresponds to the specific sequence or context being tracked.
      * </p>
      */
-    @Id
     private String id;
 
     /**

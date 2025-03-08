@@ -4,19 +4,14 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.function.Consumer;
 
-import org.norsh.blockchain.components.NorshCoin;
+import org.bson.conversions.Bson;
+import org.norsh.blockchain.S;
 import org.norsh.blockchain.components.NorshConstants;
-import org.norsh.blockchain.docs.elements.ElementDoc;
-import org.norsh.blockchain.docs.transactions.BalanceDoc;
-import org.norsh.blockchain.docs.transactions.TransactionDoc;
-import org.norsh.blockchain.docs.utils.DynamicSequenceDoc;
-import org.norsh.blockchain.services.BalanceService;
-import org.norsh.blockchain.services.BlockService;
-import org.norsh.blockchain.services.database.MongoMain;
-import org.norsh.blockchain.services.database.MongoRead;
+import org.norsh.blockchain.model.elements.ElementDoc;
+import org.norsh.blockchain.model.transactions.BalanceDoc;
+import org.norsh.blockchain.model.transactions.TransactionDoc;
+import org.norsh.blockchain.model.utils.DynamicSequenceDoc;
 import org.norsh.blockchain.services.queue.MessagingResponseService;
-import org.norsh.blockchain.services.utils.DynamicSequenceService;
-import org.norsh.blockchain.services.utils.SemaphoreService;
 import org.norsh.constants.FeePolicy;
 import org.norsh.exceptions.OperationException;
 import org.norsh.exceptions.OperationStatus;
@@ -30,10 +25,9 @@ import org.norsh.security.Hasher;
 import org.norsh.util.Converter;
 import org.norsh.util.Shard;
 import org.norsh.util.Strings;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.mongodb.core.query.Criteria;
-import org.springframework.data.mongodb.core.query.Update;
-import org.springframework.stereotype.Service;
+
+import com.mongodb.client.model.Filters;
+import com.mongodb.client.model.Updates;
 
 /**
  * Service for handling transaction creation.
@@ -60,32 +54,9 @@ import org.springframework.stereotype.Service;
  * @author Danthur Lice
  * @see <a href="https://docs.norsh.org">Norsh Documentation</a>
  */
-@Service
 //@Processable({ElementCreateDto.class, ElementGetDto.class, ElementMetadataDto.class, ElementNetworkDto.class})
 public class TransactionService {
-	@Autowired
-	private NorshCoin norshCoin;
-	
-	@Autowired
-	private BalanceService balanceService;
-
-	@Autowired
-	private DynamicSequenceService dynamicSequenceService;
-
-	@Autowired
-	private BlockService blockService;
-
-	@Autowired
-	private SemaphoreService semaphoreService;
-
-	@Autowired
-	private MongoMain mongoMain;
-
-	@Autowired
-	private MongoRead mongoRead;
-
-	@Autowired
-	private MessagingResponseService messagingService;
+	private MessagingResponseService messagingService = new MessagingResponseService();
 
 	/**
 	 * Retrieves a transaction by its ID.
@@ -95,7 +66,7 @@ public class TransactionService {
 	 */
 	@Processable(method = RestMethod.GET)
 	public DataTransfer getTransaction(TransactionGetDto dto) {
-		TransactionDoc element = mongoRead.id(dto.getId(), TransactionDoc.class);
+		TransactionDoc element = S.transactionTemplate.id(dto.getId());
 
 		if (element != null) {
 			return messagingService.response(dto.getId(), element);
@@ -123,7 +94,7 @@ public class TransactionService {
 			return messagingService.response(dto.getHash(), OperationStatus.ERROR, ex.getMessage());
 		}
 
-		ElementDoc element = mongoMain.id(dto.getElement(), ElementDoc.class);
+		ElementDoc element = S.elementTemplate.id(dto.getElement());
 		if (element == null) {
 			return messagingService.response(dto.getHash(), OperationStatus.ERROR, "Element not found");
 		}
@@ -148,37 +119,37 @@ public class TransactionService {
 		transaction.setVersion(1);
 		
 		// Check if a transaction with the same hash already exists in the current ledger.
-		if (mongoMain.exists(Criteria.where("hash").is(dto.getHash()), TransactionDoc.class, transaction.getLedger()))
+		if (S.transactionTemplate.exists(Filters.eq("hash", dto.getHash()), transaction.getLedger()))
 			return messagingService.response(dto.getHash(), OperationStatus.EXISTS);
 
 		calculateTax(transaction, element);
 		
 		additionalExecution.accept(transaction);
 
-		String semaphoreFrom = balanceService.buildId(transaction.getFrom(), transaction.getElement());
-		String semaphoreTo = balanceService.buildId(transaction.getTo(), transaction.getElement());
+		String semaphoreFrom = S.balanceService.buildId(transaction.getFrom(), transaction.getElement());
+		String semaphoreTo = S.balanceService.buildId(transaction.getTo(), transaction.getElement());
 
-		DataTransfer transportExecution = semaphoreService.execute(semaphoreFrom, _ -> {
-			BalanceDoc balanceFrom = balanceService.get(transaction.getFrom(), transaction.getElement());
+		DataTransfer transportExecution = S.semaphoreService.execute(semaphoreFrom, _ -> {
+			BalanceDoc balanceFrom = S.balanceService.get(transaction.getFrom(), transaction.getElement());
 
 			if (balanceFrom.getAmount().compareTo(transaction.getTotal()) < 0) {
 				return messagingService.response(dto.getHash(), OperationStatus.INSUFFICIENT_BALANCE, String.format("Your Need %s", transaction.getTotal()));
 			}
 
-			semaphoreService.execute(transaction.getElement(), _ -> {
-				DynamicSequenceDoc dynamicSequence = dynamicSequenceService.get(transaction.getElement());
+			S.semaphoreService.execute(transaction.getElement(), _ -> {
+				DynamicSequenceDoc dynamicSequence = S.dynamicSequenceService.get(transaction.getElement());
 				transaction.setPreviousId(dynamicSequence.getData());
 				transaction.setId(Hasher.sha3Hex(Strings.concatenate(transaction.getPreviousId(), transaction.getHash())));
-
-				mongoMain.save(transaction, transaction.getLedger());
-				dynamicSequenceService.set(transaction.getElement(), transaction.getId());
+				
+				S.transactionTemplate.save(transaction, transaction.getLedger());
+				S.dynamicSequenceService.set(transaction.getElement(), transaction.getId());
 			});
 
 			if (transaction.getId() == null) {
 				return messagingService.response(dto.getHash(), OperationStatus.ERROR, "Transaction not confirmed.");
 			}
 
-			balanceService.set(balanceFrom, balanceFrom.getAmount().subtract(transaction.getVolume()));
+			S.balanceService.set(balanceFrom, balanceFrom.getAmount().subtract(transaction.getVolume()));
 			return messagingService.response(dto.getHash(), transaction); 
 		});
 
@@ -186,82 +157,82 @@ public class TransactionService {
 			return transportExecution;
 		}
 		
-		semaphoreService.execute(semaphoreTo, _ -> {
-			BalanceDoc balanceTo = balanceService.get(transaction.getTo(), transaction.getElement());
-			balanceService.set(balanceTo, balanceTo.getAmount().add(transaction.getVolume()));
+		S.semaphoreService.execute(semaphoreTo, _ -> {
+			BalanceDoc balanceTo = S.balanceService.get(transaction.getTo(), transaction.getElement());
+			S.balanceService.set(balanceTo, balanceTo.getAmount().add(transaction.getVolume()));
 		});
 
-		Long blockNumber = blockService.addTransactionToBlock(transaction);
+		Long blockNumber = S.blockService.addTransactionToBlock(transaction);
 
-		Update update = Update.update("confirmed", true).set("block", blockNumber);
-		mongoMain.update(Criteria.where("_id").is(transaction.getId()), update, TransactionDoc.class, transaction.getLedger());
+		Bson update = Updates.combine(Updates.set("confirmed", true), Updates.set("block", blockNumber));
+		S.transactionTemplate.update(Filters.eq("_id", transaction.getId()), update, transaction.getLedger());
 
-		captureTax(transaction, element);
+		//captureTax(transaction, element);
 		
-		TransactionDoc result = mongoMain.id(transaction.getId(), TransactionDoc.class, transaction.getLedger());
+		TransactionDoc result = S.transactionTemplate.id(transaction.getId(), transaction.getLedger());
 		return messagingService.response(dto.getHash(), result);
 	}
 	
-	private DataTransfer captureTax(TransactionDoc transaction, ElementDoc element) {
-		TransactionDoc transactionTax = new TransactionDoc();
-		transactionTax.setType(TransactionType.CAPTURE);
-		transactionTax.setFrom(transaction.getFrom());
-		transactionTax.setTo(norshCoin.getOwner());
-		transactionTax.setVolume(transaction.getTotalTax());
-		transactionTax.setElement(transaction.getElement());
-		transactionTax.setNonce(0l);
-		transactionTax.setHash(transaction.getHash());
-		transactionTax.setTimestamp(System.currentTimeMillis());
-		transactionTax.setShard(Shard.calculateWeekShard(transactionTax.getTimestamp()));
-		transactionTax.setLedger(getCurrentLedger(transactionTax.getShard()));
-		transactionTax.setLink(transaction.getId());
-
-		transactionTax.setPrivacy(element.getPrivacy());
-		transactionTax.setVersion(1);
-		
-		calculateTax(transactionTax, element);
-		
-		String semaphoreFrom = balanceService.buildId(transactionTax.getFrom(), transactionTax.getElement());
-		String semaphoreTo = balanceService.buildId(transactionTax.getTo(), transactionTax.getElement());
-
-		DataTransfer transportExecution = semaphoreService.execute(semaphoreFrom, _ -> {
-			BalanceDoc balanceFrom = balanceService.get(transactionTax.getFrom(), transactionTax.getElement());
-
-			semaphoreService.execute(transactionTax.getElement(), _ -> {
-				DynamicSequenceDoc dynamicSequence = dynamicSequenceService.get(transactionTax.getElement());
-				transactionTax.setPreviousId(dynamicSequence.getData());
-				transactionTax.setId(Hasher.sha3Hex(Strings.concatenate(transactionTax.getPreviousId(), transactionTax.getHash())));
-
-				mongoMain.save(transactionTax, transactionTax.getLedger());
-				dynamicSequenceService.set(transactionTax.getElement(), transactionTax.getId());
-			});
-
-			if (transactionTax.getId() == null) {
-				return messagingService.response(transaction.getHash(), OperationStatus.ERROR, "Transaction not confirmed.");
-			}
-
-			balanceService.set(balanceFrom, balanceFrom.getAmount().subtract(transactionTax.getVolume()));
-
-			return messagingService.response(transaction.getHash(), transactionTax); 
-		});
-
-		if (transportExecution.getStatus() != OperationStatus.OK) {
-			return transportExecution;
-		}
-		
-		semaphoreService.execute(semaphoreTo, _ -> {
-			BalanceDoc balanceTo = balanceService.get(transactionTax.getTo(), transactionTax.getElement());
-			balanceService.set(balanceTo, balanceTo.getAmount().add(transactionTax.getVolume()));
-		});
-
-		Long blockNumber = blockService.addTransactionToBlock(transactionTax);
-
-		Update update = Update.update("confirmed", true).set("block", blockNumber);
-		mongoMain.update(Criteria.where("_id").is(transactionTax.getId()), update, TransactionDoc.class, transactionTax.getLedger());
-
-		TransactionDoc result = mongoMain.id(transactionTax.getId(), TransactionDoc.class, transactionTax.getLedger());
-		return messagingService.response(transaction.getHash(), result);
-	}
+//	private DataTransfer captureTax(TransactionDoc transaction, ElementDoc element) {
+//		TransactionDoc transactionTax = new TransactionDoc();
+//		transactionTax.setType(TransactionType.CAPTURE);
+//		transactionTax.setFrom(transaction.getFrom());
+//		transactionTax.setTo(S.norshCoin.getOwner());
+//		transactionTax.setVolume(transaction.getTotalTax());
+//		transactionTax.setElement(transaction.getElement());
+//		transactionTax.setNonce(0l);
+//		transactionTax.setHash(transaction.getHash());
+//		transactionTax.setTimestamp(System.currentTimeMillis());
+//		transactionTax.setShard(Shard.calculateWeekShard(transactionTax.getTimestamp()));
+//		transactionTax.setLedger(getCurrentLedger(transactionTax.getShard()));
+//		transactionTax.setLink(transaction.getId());
+//
+//		transactionTax.setPrivacy(element.getPrivacy());
+//		transactionTax.setVersion(1);
+//		
+//		calculateTax(transactionTax, element);
+//		
+//		String semaphoreFrom = S.balanceService.buildId(transactionTax.getFrom(), transactionTax.getElement());
+//		String semaphoreTo = S.balanceService.buildId(transactionTax.getTo(), transactionTax.getElement());
+//
+//		DataTransfer transportExecution = S.semaphoreService.execute(semaphoreFrom, _ -> {
+//			BalanceDoc balanceFrom = S.balanceService.get(transactionTax.getFrom(), transactionTax.getElement());
+//
+//			S.semaphoreService.execute(transactionTax.getElement(), _ -> {
+//				DynamicSequenceDoc dynamicSequence = dynamicSequenceService.get(transactionTax.getElement());
+//				transactionTax.setPreviousId(dynamicSequence.getData());
+//				transactionTax.setId(Hasher.sha3Hex(Strings.concatenate(transactionTax.getPreviousId(), transactionTax.getHash())));
+//
+//				S.transactionTemplate.save(transactionTax, transactionTax.getLedger());
+//				S.dynamicSequenceService.set(transactionTax.getElement(), transactionTax.getId());
+//			});
+//
+//			if (transactionTax.getId() == null) {
+//				return messagingService.response(transaction.getHash(), OperationStatus.ERROR, "Transaction not confirmed.");
+//			}
+//
+//			S.balanceService.set(balanceFrom, balanceFrom.getAmount().subtract(transactionTax.getVolume()));
+//
+//			return messagingService.response(transaction.getHash(), transactionTax); 
+//		});
+//
+//		if (transportExecution.getStatus() != OperationStatus.OK) {
+//			return transportExecution;
+//		}
+//		
+//		S.semaphoreService.execute(semaphoreTo, _ -> {
+//			BalanceDoc balanceTo = S.balanceService.get(transactionTax.getTo(), transactionTax.getElement());
+//			S.balanceService.set(balanceTo, balanceTo.getAmount().add(transactionTax.getVolume()));
+//		});
+//
+//		Long blockNumber = S.blockService.addTransactionToBlock(transactionTax);
+//
+//		Update update = Update.update("confirmed", true).set("block", blockNumber);
+//		S.transactionTemplate.update(Criteria.where("_id").is(transactionTax.getId()), update, TransactionDoc.class, transactionTax.getLedger());
+//
+//		TransactionDoc result = S.transactionTemplate.id(transactionTax.getId(), transactionTax.getLedger());
+//		return messagingService.response(transaction.getHash(), result);
+//	}
 
 	/**
 	 * Overloaded method to create a transaction without any additional complementary execution.

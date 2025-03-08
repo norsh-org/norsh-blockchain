@@ -1,11 +1,10 @@
-package org.norsh.blockchain.docs.elements;
+package org.norsh.blockchain.model.elements;
 
 import java.util.Map;
 
+import org.norsh.blockchain.model.ADoc;
 import org.norsh.model.types.ElementType;
 import org.norsh.model.types.Networks;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.Document;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
@@ -37,20 +36,8 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-@Document("elements")
 @JsonInclude(Include.NON_NULL)
-public class ElementDoc {
-
-    /**
-     * Unique identifier for the element.
-     * <p>
-     * This ID is a 64-character hexadecimal hash that uniquely identifies 
-     * the Smart Element within the blockchain.
-     * </p>
-     */
-    @Id
-    private String id;
-
+public class ElementDoc extends ADoc {
     /**
      * Identifier of the previous version of this element.
      * <p>

@@ -17,6 +17,7 @@
 		<plugins>
 			<plugin>
 				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.14.0</version>
 				<configuration>
 					<release>23</release>
 					<source>23</source>
@@ -33,32 +34,31 @@
 		</plugins>
 	</build>
 
-	<parent>
-		<groupId>org.springframework.boot</groupId>
-		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>3.4.1</version>
-	</parent>
-
 	<dependencies>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-web</artifactId>
-		</dependency>
-		
 		<dependency>
 			<groupId>org.projectlombok</groupId>
 	        <artifactId>lombok</artifactId>
+	        <version>1.18.36</version>
 		</dependency>
 
 		<!-- Mongo -->
 		<dependency>
-			<groupId>org.springframework.data</groupId>
-			<artifactId>spring-data-mongodb</artifactId>
-		</dependency>
-
-		<dependency>
 			<groupId>org.mongodb</groupId>
 			<artifactId>mongodb-driver-sync</artifactId>
+			<version>5.2.1</version>
+		</dependency>
+		
+		<!-- Redis -->
+		<dependency>
+		    <groupId>io.lettuce</groupId>
+		    <artifactId>lettuce-core</artifactId>
+		    <version>6.5.4.RELEASE</version>
+		</dependency>
+		
+		<dependency>
+		    <groupId>redis.clients</groupId>
+		    <artifactId>jedis</artifactId>
+		    <version>5.2.0</version>
 		</dependency>
 		
 		<!-- script -->
@@ -104,6 +104,12 @@
 		<dependency>
 			<groupId>org.norsh</groupId>
 			<artifactId>model</artifactId>
+			<version>1.0.0</version>
+		</dependency>
+		
+		<dependency>
+			<groupId>org.norsh</groupId>
+			<artifactId>http</artifactId>
 			<version>1.0.0</version>
 		</dependency>
 	</dependencies>

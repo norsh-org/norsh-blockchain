@@ -1,10 +1,8 @@
-package org.norsh.blockchain.docs.transactions;
+package org.norsh.blockchain.model.transactions;
 
 import java.math.BigDecimal;
 
-import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.index.Indexed;
-import org.springframework.data.mongodb.core.mapping.Document;
+import org.norsh.blockchain.model.ADoc;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -23,18 +21,8 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-@Document("balances")
-public class BalanceDoc {
-	/**
-	 * Unique identifier for the balance document.
-	 * <p>
-	 * This ID is derived as a hash of the concatenation of {@code owner} and {@code token}, ensuring uniqueness for each
-	 * combination of owner and token.
-	 * </p>
-	 */
-	@Id
-	private String id;
-
+//@Document("balances")
+public class BalanceDoc extends ADoc {
 	/**
 	 * The owner associated with the balance.
 	 * <p>
@@ -42,7 +30,7 @@ public class BalanceDoc {
 	 * while allowing null values.
 	 * </p>
 	 */
-	@Indexed(sparse = true)
+	//@Indexed(sparse = true)
 	private String owner;
 
 	/**
@@ -52,7 +40,7 @@ public class BalanceDoc {
 	 * lookup in queries.
 	 * </p>
 	 */
-	@Indexed
+	//@Indexed
 	private String token;
 
 	/**

@@ -7,16 +7,15 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import org.bson.conversions.Bson;
+import org.norsh.blockchain.S;
 import org.norsh.blockchain.components.NorshConstants;
-import org.norsh.blockchain.docs.blockchain.BlockDoc;
-import org.norsh.blockchain.services.database.MongoMain;
-import org.norsh.blockchain.services.utils.SemaphoreService;
+import org.norsh.blockchain.model.blockchain.BlockDoc;
 import org.norsh.security.Hasher;
 import org.norsh.util.Strings;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.mongodb.core.query.Criteria;
-import org.springframework.data.mongodb.core.query.Update;
-import org.springframework.stereotype.Service;
+
+import com.mongodb.client.model.Filters;
+import com.mongodb.client.model.Updates;
 
 /**
  * Service for mining blocks in the Norsh blockchain.
@@ -47,14 +46,7 @@ import org.springframework.stereotype.Service;
  * @version 1.0
  * @see BlockDoc
  */
-@Service
 public class BlockMinerService {
-	@Autowired
-	private MongoMain mongoMain;
-
-	@Autowired
-	private SemaphoreService semaphoreService;
-
 	/**
 	 * Mines a block using multi-threaded Proof-of-Work (PoW) methodology.
 	 * 
@@ -170,8 +162,8 @@ public class BlockMinerService {
 	 * @return {@code true} if the provided mined hash is valid and the miner is rewarded; {@code false} otherwise.
 	 */
 	public Boolean verifyBlockAndRewardMiner(String blockId, List<Long> nonces, String providedMinedHash, String miner) {
-		return semaphoreService.execute(NorshConstants.getSemaphoreBlockchain(), _ -> {
-			BlockDoc block = mongoMain.id(blockId, BlockDoc.class);
+		return S.semaphoreService.execute(NorshConstants.getSemaphoreBlockchain(), _ -> {
+			BlockDoc block = S.blockTemplate.id(blockId);
 			if (block.getMined()) {
 				return false;
 			}
@@ -188,14 +180,14 @@ public class BlockMinerService {
 			String difficultyPrefix = "0".repeat(block.getDifficulty());
 
 			if (computedHash.equals(providedMinedHash) && computedHash.startsWith(difficultyPrefix)) {
-				Update update = new Update();
-				update.set("miner", miner);
-				update.set("mined", true);
-				update.set("miningEndTimestamp", System.currentTimeMillis());
-				update.set("nonces", nonces);
-				update.set("blockHash", providedMinedHash);
+				Bson update = Updates.combine(
+						Updates.set("miner", miner),
+						Updates.set("mined", true),
+						Updates.set("miningEndTimestamp", System.currentTimeMillis()),
+						Updates.set("nonces", nonces),
+						Updates.set("blockHash", providedMinedHash));
 
-				mongoMain.update(Criteria.where("_id").is(blockId), update, BlockDoc.class);
+				S.blockTemplate.update(Filters.eq("_id", blockId), update);
 
 				distributeMiningReward(miner, block);
 				return true;

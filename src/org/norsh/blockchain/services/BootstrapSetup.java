@@ -2,14 +2,12 @@ package org.norsh.blockchain.services;
 
 import java.util.Map;
 
-import org.norsh.blockchain.components.NorshCoin;
+import org.norsh.blockchain.S;
 import org.norsh.blockchain.components.NorshConstants;
 import org.norsh.blockchain.config.BlockchainConfig;
-import org.norsh.blockchain.docs.elements.ElementDoc;
-import org.norsh.blockchain.docs.elements.ElementStatus;
-import org.norsh.blockchain.docs.utils.DynamicSequenceDoc;
-import org.norsh.blockchain.services.database.MongoMain;
-import org.norsh.blockchain.services.utils.DynamicSequenceService;
+import org.norsh.blockchain.model.elements.ElementDoc;
+import org.norsh.blockchain.model.elements.ElementStatus;
+import org.norsh.blockchain.model.utils.DynamicSequenceDoc;
 import org.norsh.exceptions.OperationException;
 import org.norsh.model.types.ElementType;
 import org.norsh.model.types.Networks;
@@ -17,8 +15,6 @@ import org.norsh.security.Hasher;
 import org.norsh.security.Signature;
 import org.norsh.util.Converter;
 import org.norsh.util.Strings;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
 
 /**
  * Bootstrap Service for Initial Blockchain Setup.
@@ -44,23 +40,7 @@ import org.springframework.stereotype.Service;
  * @author Danthur
  * @see <a href="https://docs.norsh.org">Norsh Documentation</a>
  */
-@Service
 public class BootstrapSetup {
-	@Autowired
-	private MongoMain mongoMain;
-	
-	@Autowired
-	private DynamicSequenceService sequenceService;
-	
-	@Autowired
-	private NorshCoin norshCoin;
-	
-//	@Autowired
-//	private BlockMinerService minerService;
-//	
-//	@Autowired
-//	private BlockService blockService;
-
 	/**
 	 * Starts the bootstrap process for initial blockchain configuration.
 	 * <p>
@@ -73,16 +53,16 @@ public class BootstrapSetup {
 //		mongoMain.save(block);
 		//minerService.verifyBlockAndRewardMiner(null, null, null, null)
 		
-		if (mongoMain.id("elements", DynamicSequenceDoc.class) == null) {
+		if (S.dynamicSequenceTemplate.id("elements") == null) {
 			String owner = Hasher.sha3Hex(Converter.base64OrHexToBytes(BlockchainConfig.getInstance().get("publicKey")));
 			
 			{
 				ElementDoc element = new ElementDoc();
 				element.setType(ElementType.COIN);
 				element.setOwner(owner);
-				element.setSymbol(norshCoin.getSymbol());
-				element.setDecimals(norshCoin.getDecimals());
-				element.setInitialSupply(norshCoin.getInitialSupply());
+				element.setSymbol(S.norshCoin.getSymbol());
+				element.setDecimals(S.norshCoin.getDecimals());
+				element.setInitialSupply(S.norshCoin.getInitialSupply());
 				element.setTfo(BlockchainConfig.getInstance().get("nshTFO"));
 				element.setPublicKey(BlockchainConfig.getInstance().get("publicKey"));
 				element.setHash(Hasher.sha256Hex(Strings.concatenate(element.getSymbol(), element.getDecimals(), element.getInitialSupply(), element.getTfo(), element.getPublicKey())));
@@ -103,14 +83,14 @@ public class BootstrapSetup {
 		            throw new OperationException("Invalid signature: The provided signature does not match the computed hash from the given public key.");
 		        }
 				
-				DynamicSequenceDoc dynamicSequence = sequenceService.get(NorshConstants.getTagElements());
+				DynamicSequenceDoc dynamicSequence = S.dynamicSequenceService.get(NorshConstants.getTagElements());
 				element.setPreviousId(dynamicSequence.getData());
 				element.setId(Hasher.sha3Hex(Strings.concatenate(element.getPreviousId(), element.getHash(), element.getTimestamp())));
 	
-				mongoMain.save(element);
-				sequenceService.set(NorshConstants.getTagElements(), element.getId());
+				S.elementTemplate.save(element);
+				S.dynamicSequenceService.set(NorshConstants.getTagElements(), element.getId());
 				
-				norshCoin.reload();
+				S.norshCoin.reload();
 			}
 			
 			{
@@ -140,12 +120,12 @@ public class BootstrapSetup {
 		            throw new OperationException("Invalid signature: The provided signature does not match the computed hash from the given public key.");
 		        }
 				
-				DynamicSequenceDoc dynamicSequence = sequenceService.get(NorshConstants.getTagElements());
+				DynamicSequenceDoc dynamicSequence = S.dynamicSequenceService.get(NorshConstants.getTagElements());
 				element.setPreviousId(dynamicSequence.getData());
 				element.setId(Hasher.sha3Hex(Strings.concatenate(element.getPreviousId(), element.getHash(), element.getTimestamp())));
 	
-				mongoMain.save(element);
-				sequenceService.set(NorshConstants.getTagElements(), element.getId());
+				S.elementTemplate.save(element);
+				S.dynamicSequenceService.set(NorshConstants.getTagElements(), element.getId());
 			}
 		}
 	}

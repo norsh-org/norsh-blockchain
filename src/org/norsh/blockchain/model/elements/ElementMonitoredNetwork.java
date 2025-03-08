@@ -1,4 +1,4 @@
-package org.norsh.blockchain.docs.elements;
+package org.norsh.blockchain.model.elements;
 
 import java.util.List;
 

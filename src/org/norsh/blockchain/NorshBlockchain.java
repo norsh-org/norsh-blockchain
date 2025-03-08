@@ -2,21 +2,10 @@ package org.norsh.blockchain;
 
 import java.util.Calendar;
 
-import org.norsh.blockchain.config.BlockchainConfig;
 import org.norsh.blockchain.services.BootstrapSetup;
+import org.norsh.blockchain.v1.DataTransferApiV1;
+import org.norsh.rest.HttpServer;
 import org.norsh.util.Log;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.Banner;
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration;
-import org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration;
-import org.springframework.boot.autoconfigure.web.servlet.WebMvcAutoConfiguration;
-import org.springframework.context.annotation.ComponentScan;
-
-import jakarta.annotation.PostConstruct;
-import jakarta.annotation.PreDestroy;
 
 /**
  * Main class for the Norsh Blockchain worker.
@@ -46,19 +35,7 @@ import jakarta.annotation.PreDestroy;
  * @version 1.0.0
  * @see <a href="https://docs.norsh.org">Norsh Documentation</a>
  */
-@SpringBootApplication
-@ComponentScan("org.norsh.blockchain")
-@EnableAutoConfiguration(exclude = {WebMvcAutoConfiguration.class, MongoAutoConfiguration.class, RedisRepositoriesAutoConfiguration.class} )
 public class NorshBlockchain {
-	@Autowired
-	private BootstrapSetup bootstrapService;
-	
-	@Autowired
-	private Log log;
-
-//	@Autowired
-//	private QueueConsumerService consumerService;
-	
 	/**
      * Entry point for the Norsh Blockchain worker.
      * <p>
@@ -67,41 +44,27 @@ public class NorshBlockchain {
      * </p>
      */
 	public static void main(String[] args) {
-		BlockchainConfig.initializeDefaultLocalization();
-		SpringApplication app = new SpringApplication(NorshBlockchain.class);
-		app.setBannerMode(Banner.Mode.OFF);
-		app.setDefaultProperties(BlockchainConfig.getInstance().getSpringProperties());
-		app.run(args);
-	}
-
-	/**
-     * Logs system configuration details during startup.
-     * <p>
-     * This method runs automatically after the application initializes and records essential metadata, including system
-     * information and author credits.
-     * </p>
-     */
-	@PostConstruct
-	private void bootstrap() {
+//		BlockchainConfig.initializeDefaultLocalization();
+//		SpringApplication app = new SpringApplication(NorshBlockchain.class);
+//		app.setBannerMode(Banner.Mode.OFF);
+//		app.setDefaultProperties(BlockchainConfig.getInstance().getSpringProperties());
+//		app.run(args);
+		
+		Log log = S.log;
 		log.system("Norsh Blockchain");
 		log.system("Developed by " + String.join(", ", "Danthur Lice") + " and contributors.");
 		log.system(String.format("Copyright © 2024-%s Norsh. All rights reserved", Calendar.getInstance().get(Calendar.YEAR)));
-		log.system("Application started.");
+		log.system(String.format("Server address: %s:%s", S.config.getSpringProperties().get("server.host"), S.config.getSpringProperties().get("server.port")));
+
+		new BootstrapSetup().start();
+
+		HttpServer httpServer = new HttpServer();
+		//httpServer.setExceptionHandler(new ApiThrowableHandler());
+		httpServer.addEndpoint(DataTransferApiV1.class);
+		httpServer.start(4545, false);
+
+		log.system("Server started.");
 		log.breakLine();
-
-		bootstrapService.start();
 		
-		//consumerService.startConsumer();
-	}
-
-	/**
-     * Ensures all services are properly shut down before termination.
-     */
-	@PreDestroy
-	private void shutdown() {
-		log.system("Starting shutdown process for Norsh Blockchain...");
-		// consumerService.shutdown();
-		//shutdown mongo
-		//shutdown redis
 	}
 }

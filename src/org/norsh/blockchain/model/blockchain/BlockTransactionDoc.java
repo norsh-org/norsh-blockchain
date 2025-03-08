@@ -1,4 +1,4 @@
-package org.norsh.blockchain.docs.blockchain;
+package org.norsh.blockchain.model.blockchain;
 import java.math.BigDecimal;
 
 import lombok.Getter;

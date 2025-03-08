@@ -1,11 +1,9 @@
-package org.norsh.blockchain.docs.blockchain;
+package org.norsh.blockchain.model.blockchain;
 
 import java.math.BigDecimal;
 import java.util.List;
 
-import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.index.Indexed;
-import org.springframework.data.mongodb.core.mapping.Document;
+import org.norsh.blockchain.model.ADoc;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -46,15 +44,8 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-@Document("blockchain")
-public class BlockDoc {
-	/**
-     * Unique identifier for the block.
-     */
-    @Id
-    private String id;
-    
-    @Indexed(unique = true)
+public class BlockDoc extends ADoc {
+    //@Indexed(unique = true)
     private Long number;
 
     /**

@@ -1,10 +1,10 @@
 package org.norsh.blockchain.components;
 
-import org.norsh.blockchain.docs.elements.ElementDoc;
-import org.norsh.blockchain.services.database.MongoMain;
+import org.norsh.blockchain.S;
+import org.norsh.blockchain.model.elements.ElementDoc;
 import org.norsh.model.types.ElementType;
-import org.springframework.data.mongodb.core.query.Criteria;
-import org.springframework.stereotype.Component;
+
+import com.mongodb.client.model.Filters;
 
 /**
  * Service for managing balances associated with owners and tokens.
@@ -25,9 +25,7 @@ import org.springframework.stereotype.Component;
  * @author Danthur Lice
  * @see <a href="https://docs.norsh.org">Norsh Documentation</a>
  */
-@Component
 public final class NorshCoin {
-	private MongoMain mongoMain;
 	private ElementDoc elementDoc;
 
 	public String getSymbol() {
@@ -40,11 +38,6 @@ public final class NorshCoin {
 
 	public Long getInitialSupply() {
 		return 45_000_000l;
-	}
-
-	public NorshCoin(MongoMain mongoMain) {
-		this.mongoMain = mongoMain;
-		reload();
 	}
 
 	public String getId() {
@@ -60,9 +53,9 @@ public final class NorshCoin {
 	}
 
 	public Boolean reload() {
-		synchronized (mongoMain) {
+		synchronized (NorshCoin.class) {
 			if (elementDoc == null)
-				elementDoc = mongoMain.get(Criteria.where("symbol").is(getSymbol()).and("type").is(ElementType.COIN), ElementDoc.class);
+				elementDoc = S.elementTemplate.get(Filters.and(Filters.eq("symbol", getSymbol()), Filters.eq("type", ElementType.COIN)));
 			
 			return elementDoc != null;
 		}

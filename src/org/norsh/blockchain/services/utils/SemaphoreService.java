@@ -2,18 +2,14 @@ package org.norsh.blockchain.services.utils;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import org.norsh.blockchain.S;
 import org.norsh.blockchain.config.BlockchainConfig;
-import org.norsh.blockchain.services.queue.CacheService;
 import org.norsh.config.DefaultsConfig;
 import org.norsh.exceptions.InternalException;
 import org.norsh.security.Hasher;
-import org.norsh.util.Log;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
 
 /**
  * Distributed Semaphore implementation using Redis.
@@ -45,19 +41,11 @@ import org.springframework.stereotype.Service;
  * @author Danthur Lice
  * @see <a href="https://docs.norsh.org">Norsh Documentation</a>
  */
-@Service
 public class SemaphoreService {
-
     private DefaultsConfig defaultsConfig = BlockchainConfig.getInstance().getDefaultsConfig();
 
     /** A thread-safe map for managing in-memory synchronization of semaphore locks. */
     private final Map<String, Object> synchronizedData = new ConcurrentHashMap<>();
-
-    @Autowired
-    private Log log;
-
-    @Autowired
-    private CacheService cacheService;
 
     /**
      * Executes an operation within a semaphore lock.
@@ -144,8 +132,7 @@ public class SemaphoreService {
 
                 Boolean success;
                 do {
-                    success = cacheService.getTemplate().opsForValue().setIfAbsent(
-                            resourceId, lockId, defaultsConfig.getSemaphoreLockTimeoutMs(), TimeUnit.MILLISECONDS);
+                    success = S.cacheService.saveIfAbsent(resourceId, lockId, defaultsConfig.getSemaphoreLockTimeoutMs());
 
                     if (success) { // && lockId.equals(cacheService.get(resourceId))) {
                         return lockId;
@@ -156,7 +143,7 @@ public class SemaphoreService {
                 } while (Math.abs(System.currentTimeMillis() - startTime) < timeoutMs);
 
             } catch (Exception ex) {
-                log.error("Error while capturing semaphore for resource: " + resourceId, ex);
+                S.log.error("Error while capturing semaphore for resource: " + resourceId, ex);
                 throw new InternalException("Failed to capture semaphore", ex);
             }
 
@@ -172,13 +159,13 @@ public class SemaphoreService {
      * @return {@code true} if the lock was successfully released, otherwise {@code false}.
      */
     public boolean release(String resourceId, String lockId) {
-        String currentLockId = cacheService.get(resourceId);
+        String currentLockId = S.cacheService.get(resourceId);
 
         if (lockId.equals(currentLockId)) {
             forceRelease(resourceId);
             return true;
         } else {
-            log.warning("Attempt to release lock failed: Not the lock owner for resource: " + resourceId);
+            S.log.warning("Attempt to release lock failed: Not the lock owner for resource: " + resourceId);
             return false;
         }
     }
@@ -205,7 +192,7 @@ public class SemaphoreService {
      * @param resourceId The unique identifier of the resource to unlock.
      */
     public void forceRelease(String resourceId) {
-        cacheService.delete(resourceId);
+    	S.cacheService.delete(resourceId);
         synchronizedData.remove(resourceId); // Prevents unnecessary heap memory growth
     }
 

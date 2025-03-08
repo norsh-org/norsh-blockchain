@@ -1,7 +1,4 @@
 Manifest-Version: 1.0
 Build-Jdk-Spec: 22
-Implementation-Title: Norsh - Blockchain
-Implementation-Version: 1.0.0
-Implementation-Vendor: Norsh
 Created-By: Maven Integration for Eclipse
 
