@@ -33,7 +33,7 @@ public class BlockchainConfig extends Config {
     private static final BlockchainConfig instance = new BlockchainConfig();
 
     static {
-        instance.load("NORSH_BLOCKCHAIN_CONFIG", "./blockchain.json");
+        instance.load("NORSH_BLOCKCHAIN_CONFIG", "/etc/norsh/blockchain.json");
     }
     
     public static BlockchainConfig getInstance() {
